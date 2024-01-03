@@ -1,0 +1,17 @@
+{
+	"name": "wapmorgan/mp3info",
+	"type": "library",
+	"license": "LGPL-3.0",
+	"keywords": ["mp3", "audio", "id3", "id3v1", "id3v2", "mpeg"],
+	"description": "The fastest php library to extract mp3 tags & meta information.",
+	"autoload": {
+		"psr-4": {
+            "wapmorgan\\Mp3Info\\": "src/"
+        }
+	},
+	"require": {
+		"php": ">=5.4.0",
+		"ext-mbstring": "*"
+	},
+	"bin": ["bin/mp3scan"]
+}
