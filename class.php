@@ -6,9 +6,14 @@ use wapmorgan\Mp3Info\Mp3Info;
  * Représente un fichier musique .mp3
  */
 class Music {
-    /** @var string Contient le chemin jusqu'au répertoire des musiques*/
+    /** @var string Contient l'url jusqu'au répertoire des musiques*/
     public const STORAGE_URL = 'http://musiques.nils.test.sc2mnrf0802.universe.wf/api/';
+    
+    /** @var string Contient le chemin jusqu'au répertoire des musiques*/
     public const STORAGE_PATH = '/home/sc2mnrf0802/nils.test.musiques.wf/api/';
+
+    /** @var Music Représente l'objet par défaut*/
+    protected const defaultObject = new Music(path: '');
 
     /** @var string Le titre de la musique*/
     public string $title;
@@ -26,7 +31,7 @@ class Music {
     private string $path;
 
     private string $fullPath = self::STORAGE_URL;
-    public function __construct(string $title, array $composers, int $year, string $commentaire="", string $path){
+    public function __construct(string $title='', array $composers=[], int $year=-1, string $commentaire="", string $path){
          if(empty($path)){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
         $this->title = (isset($title))? $title : '';
         $this->composers = (isset($composers))? $composers : [];
@@ -34,6 +39,8 @@ class Music {
         $this->commentaire = isset($commentaire)? $commentaire : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
+
+        if($this->title===$this->$commentaire && $this->title===''&&$this->year===-1&&$this->composers===[] && $path!==''){$this->setFromFile($path);}
     }
 
     public function __serialize() : array{
@@ -101,7 +108,7 @@ class Music {
     /**
      * Set les fields de $this aux fields de $obj
      */
-    private function setTo(self $obj){
+    protected function setTo(self $obj){
         $this->title = $obj->title;
         $this->composers = $obj->composers;
         $this->year = $obj->year;
@@ -121,6 +128,21 @@ class Music {
         $this->commentaire = isset($commentaire)? $commentaire : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
+    }
+
+    /**
+     * Vérifie que $this et $obj sont égaux
+     * @param Music $obj L'autre objet.
+     */
+    protected function isEqual(Music $obj) : bool{
+        foreach($this as $field => $name){
+            if($field != $obj->$name){return false;}
+        }
+        return true;
+    }
+
+    public function isDefault(Music $obj) : bool{
+        return $obj->isEqual(Music::defaultObject);
     }
 
     /**
@@ -145,7 +167,7 @@ class Music {
      * @param string $path Le chemin (à partir de /api/) du fichier 
      */
     public static function getFromFile(string $path) : Music{
-        $ret = (new Music('', [], 0, '', 'invalid path'));
+        $ret = Music::defaultObject;
         $ret->setFromFile($path);
         return $ret;
     }
