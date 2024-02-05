@@ -103,7 +103,7 @@ class Music {
     }
 
     /**
-     * Set les fields de $this aux fields de $obj
+     * Set les fields de $this aux fields de $obj 
      */
     protected function setTo(self $obj){
         $this->title = $obj->title;
