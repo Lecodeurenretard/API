@@ -12,17 +12,14 @@ class Music {
     /** @var string Contient le chemin jusqu'au répertoire des musiques*/
     public const STORAGE_PATH = '/home/sc2mnrf0802/nils.test.musiques.wf/api/';
 
-    /** @var Music Représente l'objet par défaut*/
-    protected const defaultObject = new Music(path: '');
-
     /** @var string Le titre de la musique*/
     public string $title;
     
     /** @var string[] Les compositeurs ayant participés*/    
     public array $composers = array();
     
-    /** @var int L'année où est sortie la musique*/
-    public int $year;
+    /** @var int Le numéro de la piste de la musique*/
+    public int $track;
 
     /** @var string Le commentaire laissé*/    
     public string $commentaire;
@@ -31,23 +28,23 @@ class Music {
     private string $path;
 
     private string $fullPath = self::STORAGE_URL;
-    public function __construct(string $title='', array $composers=[], int $year=-1, string $commentaire="", string $path){
-         if(empty($path)){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
+    public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $path){
+        if(empty($path) && $path !==''){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
         $this->title = (isset($title))? $title : '';
         $this->composers = (isset($composers))? $composers : [];
-        $this->year = (isset($year))? $year: -1;
+        $this->track = (isset($track))? $track: -1;
         $this->commentaire = isset($commentaire)? $commentaire : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
 
-        if($this->title===$this->$commentaire && $this->title===''&&$this->year===-1&&$this->composers===[] && $path!==''){$this->setFromFile($path);}
+        if($this->title===$this->commentaire && $this->title===''&&$this->track===-1&&$this->composers===[] && $path!==''){$this->setFromFile($path);}
     }
 
     public function __serialize() : array{
         return [
             "title"=> $this->title,
             "composers"=> serialize($this->composers),
-            "year"=> $this->year,
+            "track"=> $this->track,
             "commentaire"=> $this->commentaire,
             "path" => $this->path
         ];
@@ -56,14 +53,14 @@ class Music {
     public function __unserialize(array $data) : void{
         $this->title = $data["title"];
         $this->composers = unserialize($data["composers"]);
-        $this->year = $data["year"];
+        $this->track = $data["track"];
         $this->commentaire = $data["commentaire"];
         $this->path = $data["path"];
         $this->fullPath = Music::STORAGE_URL . $this->path;
     }
 
     public function __toString() : string{
-        return $this->title . " (" . implode(", ", $this->composers) . '; ' . $this->year .")";
+        return $this->title . " (" . implode(", ", $this->composers) . '; ' . $this->track .")";
     }
 
     /**
@@ -77,7 +74,7 @@ class Music {
             '        ' . arrayToString($this->composers, ','                                            . PHP_EOL .
             '        ', '"')                                                                            . PHP_EOL .
             '    ],'                                                                                    . PHP_EOL .
-            '    "year": '. $this->year.','                                                             . PHP_EOL . 
+            '    "track": '. $this->track.','                                                             . PHP_EOL . 
             '    "commentaire": "'. $this->commentaire.'",'                                             . PHP_EOL .
             '    "path": "' . $this->path .'"'                                                          . PHP_EOL .
             '}';
@@ -90,8 +87,8 @@ class Music {
      */
     static function jsonDecode(string $json) : self{
         $obj = json_decode($json, false, 3);
-        if(!isset($obj->title, $obj->composers, $obj->year, $obj->commentaire, $obj->path)){throw new ServerError("The object given to decode is not a Music object at line " . __LINE__ . " from: " . __FILE__, 500, "json given: " . $json);}
-        return new Music($obj->title, explode(',', $obj->composers), $obj->year, $obj->commentaire, $obj->path);
+        if(!isset($obj->title, $obj->composers, $obj->track, $obj->commentaire, $obj->path)){throw new ServerError("The object given to decode is not a Music object at line " . __LINE__ . " from: " . __FILE__, 500, "json given: " . $json);}
+        return new Music($obj->title, explode('/', $obj->composers), $obj->track, $obj->commentaire, $obj->path);
     }
     
     /**
@@ -111,7 +108,7 @@ class Music {
     protected function setTo(self $obj){
         $this->title = $obj->title;
         $this->composers = $obj->composers;
-        $this->year = $obj->year;
+        $this->track = $obj->track;
         $this->commentaire = $obj->commentaire;
         $this->path = $obj->path;
         $this->fullPath = $obj->fullPath;
@@ -120,12 +117,12 @@ class Music {
     /**
      * Set les fields de $this suivant les arguments
      */
-    private function set(?string $title, ?array $composers, ?int $year, ?string $commentaire="", string $path){
+    private function set(?string $title, ?array $composers, ?int $track, ?string $commentaire="", string $path){
        if(empty($path)){throw new ServerError("Cannot set object with empty path", 500);}
-        $this->title = (isset($title))? $title : '';
-        $this->composers = (isset($composers))? $composers : [];
-        $this->year = (isset($year))? $year: -1;
-        $this->commentaire = isset($commentaire)? $commentaire : '';
+        $this->title        =    isset($title)      ? $title       : '';
+        $this->composers    =    isset($composers)  ? $composers   : [];
+        $this->track        =    isset($track)      ? $track       : -1;
+        $this->commentaire  =    isset($commentaire)? $commentaire : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
     }
@@ -142,7 +139,7 @@ class Music {
     }
 
     public function isDefault(Music $obj) : bool{
-        return $obj->isEqual(Music::defaultObject);
+        return $obj->isEqual(MusicdefaultObject);
     }
 
     /**
@@ -152,14 +149,14 @@ class Music {
     public function setFromFile(string $path) : void{
         if($path === null){throw new ServerError("The path argument is null at l " . __LINE__ . " in " . __FILE__ . ' .', 500);}
 
-        $music = new Mp3Info(Music::STORAGE_PATH . $path);
+        $music = new Mp3Info(Music::STORAGE_PATH . $path, true);
         
-        $song = ret_array_key_if_defined($music->tags1, 'song', '');
-        $artist = ret_array_key_if_defined($music->tags1, 'artist',[]);        
-        $year = ret_array_key_if_defined($music->tags1, 'year', -1);        
-        $comment = ret_array_key_if_defined($music->tags1, 'comment','');    
+        $song = ret_array_key_if_defined($music->tags, 'song', '');
+        $artist = explode('/', ret_array_key_if_defined($music->tags, 'artist', []));        
+        $track = ret_array_key_if_defined($music->tags, 'track', -1);        
+        $comment = ret_array_key_if_defined($music->tags, 'comment','');    
 
-        $this->set($song, $artist, $year, $comment, $path);
+        $this->set($song, $artist, $track, $comment, $path);
     }
 
     /**
@@ -167,11 +164,13 @@ class Music {
      * @param string $path Le chemin (à partir de /api/) du fichier 
      */
     public static function getFromFile(string $path) : Music{
-        $ret = Music::defaultObject;
+        $ret = MusicdefaultObject;
         $ret->setFromFile($path);
         return $ret;
     }
 }
+/** @var Music Représente l'objet par défaut */
+const MusicdefaultObject = new Music('', [], -1, '', '');
 
 class ServerError extends ErrorException{
     const code_list = [
@@ -181,13 +180,13 @@ class ServerError extends ErrorException{
         404 => "Not found",
         405 => "Method not allowed",
         406 => "Not Acceptable",
+        415 => "Unsupported Media Type",
         417 => "Expectation Failed",
         418 => "I'm a teapot",       //should not be used, just let it sit there
         422 => "Unprocessable content",
         500 => "Internal server error",
-        503 => "Service unavailable",
-        //I made this code
-        452 => "Malformed request"
+        501 => "Not Implemented",
+        503 => "Service unavailable"
     ];
 
     public string $name = self::code_list[0];
