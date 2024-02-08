@@ -152,7 +152,7 @@ class Music {
         $music = new Mp3Info(Music::STORAGE_PATH . $path, true);
         
         $song = ret_array_key_if_defined($music->tags, 'song', '');
-        $artist = explode('/', ret_array_key_if_defined($music->tags, 'artist', []));        
+        $artist = explode('/', ret_array_key_if_defined($music->tags, 'artist', ''));        
         $track = ret_array_key_if_defined($music->tags, 'track', -1);        
         $comment = ret_array_key_if_defined($music->tags, 'comment','');    
 
@@ -274,12 +274,13 @@ class DB{
  * @param array $arr l'array à être transformé
  * @param string $sep =', ' | le séparateur
  * @param string $autour ='' | ce qui entoure chaque élément
+ * @param bool $keys =false | Si l'on doit afficher les clefs
  * @return string tous les éléments de $arr avec entre eux $sep
  */
-function arrayToString(array $arr, string $sep=', ', string $autour='') : string{
+function arrayToString(array $arr, string $sep=', ', string $autour='', $keys = false) : string{
     $ret = '';
-    foreach($arr as $elem){
-        $ret .= $autour . $elem . $autour . $sep;
+    foreach($arr as $i => $elem){
+        $ret .= $autour . ($keys? $i . $autour . ': ' . $autour : '') . $elem . $autour . $sep;
     }
     return rtrim($ret, $sep);   //enlève le dernier séparateur
 }

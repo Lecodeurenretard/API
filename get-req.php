@@ -2,11 +2,43 @@
     define('HEADERS', getallheaders());
     $head_method = $_SERVER["REQUEST_METHOD"] == "HEAD"; //dans ce cas là, on n'envoie que les headers
     try{
+        require("class.php");
 
-        if(in_array('Accept', HEADERS) && (HEADERS['Accept'] == 'text/html' ||HEADERS['Accept'] == 'appilcation/mp3')){
+        $method = $_SERVER["REQUEST_METHOD"];
+
+        switch($method){
+            case "HEAD":
+            case "GET":
+                $req =& $_GET;   //on met la référence au cas où on change les supervariable entre temps
+                break;
+            
+            case "POST":
+                $req =& $_POST;
+                break;
+            /*
+            elseif($method == "PUT"){
+                header("Allow:  GET, POST, HEAD;", false, 403);
+                throw new ServerError("Method PUT not allowed.", 403);
+            }
+            */
+            default:
+                header("Allow: GET, POST, HEAD;", false, 405);
+                throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 405);
+        }
+
+        if(array_key_exists('Accept', HEADERS) && (HEADERS['Accept'] == 'audio/mp3' || HEADERS['Accept'] == 'audio/*')){    //if exepct audio/mp3 redirect to get-music.php
+            foreach(HEADERS as $header){header($header);}
+            header("Location: get-music.php?file=" . urlencode($req["file"]), 301);
+            header("Content-Type: text/html; charset=utf-8'");
+            exit("You should be redirected, if the redirection don't work, go to <a href'get-music.php?file=" . urlencode($req["file"]) . "'>get-music</a>");
+        }else if(array_key_exists('Accept', HEADERS) && str_starts_with(HEADERS['Accept'], 'audio')){
+            throw new ServerError("Can only give mp3 files", 406);
+        }
+
+        if(array_key_exists('Accept', HEADERS) && HEADERS['Accept'] == 'text/html'){
             throw new ServerError("Can only give json version", 501);
         }else if(
-            in_array('Accept', HEADERS) &&
+            array_key_exists('Accept', HEADERS) &&
             !(
                 (
                     str_starts_with(HEADERS['Accept'], 'application/') || str_starts_with(HEADERS['Accept'], '*/')
@@ -15,23 +47,9 @@
                 )  
             )
         ){    // don't accept JSONs
-            throw new ServerError("Cannot provide other representation yet, html and mp3 responses are planned to be implemented.", 406);
+            throw new ServerError("Cannot provide other representation yet, html response is planned to be implemented.", 406);
         }
         header('Content-Type: application/json; charset=utf-8', true, 100);
-
-        require_once("class.php");
-
-        $method = $_SERVER["REQUEST_METHOD"];
-        if($method == "GET"){$req =& $_GET;}            //on met la référence au cas où on change les supervariable entre temps
-        elseif($method == "POST"){$req =& $_POST;}
-        elseif($method == "PUT"){
-            header("Allow:  GET, POST, HEAD;", false, 403);
-            throw new ServerError("Method PUT not allowed.", 403);
-        }
-        else{
-            header("Allow: GET, POST, HEAD;", false, 405);
-            throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 405);
-        }
 
         
         if(!array_key_exists("file", $req)){
@@ -58,14 +76,14 @@
             echo $music->jsonEncode();
             return $music->jsonEncode();
     }catch(ServerError $err){
+        header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
         
-        http_response_code($err->getCode());
         if(!$head_method)
             echo $err->toJson();
             return $err->toJson();
         
     }catch(Throwable $err){
-        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8', true, 500);
         
         if(!$head_method)
             $e = new ServerError($err->getMessage(), 0);
