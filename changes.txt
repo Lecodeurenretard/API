@@ -1,0 +1,15 @@
+Added music transfer
+class.php:
+    minor corrections in syntax,
+    added arg '$key' to function 'arrayToString'
+
+get-req.php:
+    correction bugs,
+    move some things,
+    added header 'Content-Type' to errors,
+    added redirection to './get-music.php'
+
+get-music.php:
+    Creation of the file,
+    handles music transfer (no FTP),
+    Allow only GET method
