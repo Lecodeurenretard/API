@@ -84,10 +84,20 @@ class Music {
     /**
      * Convertit la string en format JSON en objet Music
      * @param self $json Le json encodé par Music->jsonEncode()
+     * @throws ServerError Lance une ServerError si $json n'est pas un objet Music
      */
     static function jsonDecode(string $json) : self{
         $obj = json_decode($json, false, 3);
-        if(!isset($obj->title, $obj->composers, $obj->track, $obj->commentaire, $obj->path)){throw new ServerError("The object given to decode is not a Music object at line " . __LINE__ . " from: " . __FILE__, 500, "json given: " . $json);}
+        if(
+            empty($obj->title) 
+            || empty($obj->composers) 
+            || empty($obj->track) 
+            || empty($obj->commentaire) 
+            || empty($obj->path)
+            ){
+                throw new ServerError("The object given to decode is not a Music object at line " . __LINE__ . " from: " . __FILE__, 500, "json given: " . $json);
+            }
+        
         return new Music($obj->title, explode('/', $obj->composers), $obj->track, $obj->commentaire, $obj->path);
     }
     
@@ -118,7 +128,6 @@ class Music {
      * Set les fields de $this suivant les arguments
      */
     private function set(?string $title, ?array $composers, ?int $track, ?string $commentaire="", string $path){
-       if(empty($path)){throw new ServerError("Cannot set object with empty path", 500);}
         $this->title        =    isset($title)      ? $title       : '';
         $this->composers    =    isset($composers)  ? $composers   : [];
         $this->track        =    isset($track)      ? $track       : -1;
@@ -147,8 +156,6 @@ class Music {
      * @param string $path Le chemin (à partir de /api/) du fichier, ex: ex.mp3 pour  /home/sc2mnrf0802/nils.test.musiques.wf/api/ex.mp3
      */
     public function setFromFile(string $path) : void{
-        if($path === null){throw new ServerError("The path argument is null at l " . __LINE__ . " in " . __FILE__ . ' .', 500);}
-
         $music = new Mp3Info(Music::STORAGE_PATH . $path, true);
         
         $song = ret_array_key_if_defined($music->tags, 'song', '');
@@ -258,10 +265,14 @@ class DB{
      * glob but return an array of Music
      * @param string $pattern The pattern. No tilde expansion or parameter substitution is done. Accepts special characters.
      * @param ?int $flags =0 | Valid flags: GLOB_MARK, GLOB_NOSORT, GLOB_NOCHECK, GLOB_NOESCAPE, GLOB_BRACE, GLOB_ONLYDIR, GLOB_ERR; See the doc for more details.
+     * @throws ServerError Lance une ServerError si glob échoue (=== false)
      */
     static function glob(string $pattern, ?int $flags = 0) : array{
-        if(glob($pattern, $flags) === false){throw new ServerError("The glob function encounters an error, please check $pattern (pattern) and $flags (flags).", 500, "Error occured in line " . __LINE__ ." of file " . __FILE__);}
-        foreach(glob($pattern, $flags) as $file=>$i){
+        $glob = glob($pattern, $flags);
+
+        if($glob === false){throw new ServerError("The glob function encounters an error, please check $pattern (pattern) and $flags (flags).", 500, "Error occured in line " . __LINE__ ." of file " . __FILE__);}
+        
+        foreach($glob as $i=>$file){
             $files[$i] = Music::getFromFile($file);
         }
         return $files;
@@ -355,5 +366,135 @@ function chainFunctDemiRef(string $fun, iterable& $arg, bool $strict=true, ...$o
  */
 function ret_array_key_if_defined(array $arr, string|int $key, $default=null) : mixed{
     return (array_key_exists($key, $arr))? $arr[$key] : $default;
+}
+
+
+/**
+ * redirects the user with an http response 3XX to the url: "$url?$paramName[0]=$paramValue[0]& ..."
+ * @param string $url l'url de redirection
+ * @param ?array $paramName =null | Le nom des paramètres à passer à l'url, si n'est pas de la même longueur que $paramValue, sera ingnoré.
+ * @param ?array $paramValue =null | La valeur des paramètres à passer à l'url, si n'est pas de la même longueur que $paramName, sera ingnoré.
+ * @param bool $replaceHeaders =true | Le deuxième argument de header()
+ * @param int $code =308 | Le code de la réponse http à envoyer.
+ * @param string ...$headers | Les headers à envoyer à la place de ceux reçus, si pas set, la fonction enverra les headers des la page
+ * @throws ServerError Si !( 299 < $code < 399) lève une ServerError
+ */ 
+function redirect(string $url, ?array $paramName = null, ?array $paramValue = null, bool $replaceHeaders = true, int $code = 308, ?string ...$headers) : void{
+    if($code > 399 || $code < 299){
+        throw new ServerError("Cannot redirect with the code: '$code'", 500, "function redirect()");
+    }
+
+    $head = isset($headers)? $headers : HEADERS;
+    $params = (isset($paramName) && count($paramName) == count($paramValue) && count($paramName) != 0)? 
+        '?' .  paramURL($paramName, array_values($paramValue)) 
+        : '';
+
+    foreach($head as $header){header($header, $replaceHeaders);}
+    
+    header("Location: $url$params", false, $code);
+    header("Content-Type: text/html; charset=utf-8'", false);
+    exit("You should be redirected, if the redirection don't work, go to <a href'$url$params'>". basename($url) ."</a>");
+}
+/**
+ * return the arguments as if they were in an URL
+ */
+function paramURL(array $paramName, array $paramValue) : ?string{
+    if(count($paramName) != count($paramValue)){return null;}
+    $ret = '';
+    foreach($paramName as $i => $name){
+        $ret .= urlencode($name) . '=' . urlencode($paramValue[$i]) . '&';
+    }
+    return rtrim($ret, '&');
+}
+
+/**
+ * Verifie si le header Accept permet le type "$type/$sous_type".
+ * @param string $type Le type MIME
+ * @param string $sous_type le sous type MIME
+ */
+function verifyAcceptsType(string $type, string $sous_type) : bool{
+    $exists = false;
+    foreach(parseAcceptHeader() as $accept){
+        if($accept->type == "$type/$sous_type" || $accept->type == "$type/*" || $accept->type == "*/*"){
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Prend le paramètre 'q' dans l'en-tête "Accept" et retourne 1 si l'en-tête n'est pas accessible ou le type spécifié n'est pas présent
+ * @param string $MIME_type Le type et le sous-type MIME à évaluer
+ * @return bool Si le type complet MIME est disponible et est le plus haut dans le poid
+ */
+function isMaxWeightAndAvailble(string $MIME_Type) : bool{
+    $comma_exploded = explode(',', HEADERS['Accept']);
+    $this_weight = getWeightOfAccept($MIME_Type);
+
+    $type_availble = ['*/*', 'text/html', 'text/json', 'application/json', 'audio/mp3'];
+    if(!in_array($MIME_Type, $type_availble)){return false;}
+
+    if($this_weight == 0){return false;}    //always true
+    foreach($comma_exploded as $type){
+        if($this_weight < getWeightOfAccept(explode(';', $type)[0])  &&  array_search_include($type_availble, $type) == -1){ //if the type watched has a greater priority and is availble
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Retourne le poid du type MIME
+ */
+function getWeightOfAccept(string $MIME_type) : float{
+    $MIME_type = rtrim(ltrim($MIME_type));  //no whitespace before and after
+    if(!array_key_exists('Accept', HEADERS)){return 1;}
+    if(!str_contains(HEADERS['Accept'], $MIME_type)){return 0;}
+
+    $comma_exploded = explode(',', HEADERS['Accept']);
+    $key = array_search_include($comma_exploded, $MIME_type);
+    $interestring = $comma_exploded[($key !== -1)? $key : 0];   //if is not in the array, get the first element
+    
+
+    if(!str_contains($interestring, ';')){return 1;}
+    return (float) (ltrim(explode(';', $interestring)[1], ' q='));
+}
+
+/**
+ * Si $needle est présent dans un des éléments de $haystack
+ * @param array $haystack Un array dont les elements seront convertie en string par strval()
+ * @param string $needle Ce que l'on doit chercher
+ */
+function array_search_include(array $haystack, string $needle) : mixed{
+    foreach($haystack as $key => $elem){
+        $e = strval($elem);
+
+        if(str_contains($e, $needle)){
+            return $key;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Parse the header Accept from 'text/html; q=0.2, audio/wav' to [{type: 'text/html', q: 0.2}, {type: 'audio/wav', q: 1}]
+ * @return array Retourne un array d'objet avec deux propriétées: type pour le type MIME et q pour le poid
+ */
+function parseAcceptHeader() : Array{
+    $nonParsed = HEADERS['Accept'];
+    $comma = explode(',', $nonParsed);
+    $ret = array();
+
+    foreach($comma as $type){
+        $cont = str_contains($type, ';')? explode(';', $type) : [$type, '1'];
+        array_push(
+            $ret,
+            (object) [
+                'type' => ltrim($cont[0]),
+                'q'=> (float) ltrim($cont[1], 'q= ')    //the weight
+            ]
+        );
+    }
+    return $ret;
 }
 ?>
