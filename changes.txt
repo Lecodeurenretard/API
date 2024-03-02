@@ -1,15 +1,7 @@
-Added music transfer
-class.php:
-    minor corrections in syntax,
-    added arg '$key' to function 'arrayToString'
+moved all functions (not methods) in functions.php.
+Created functions checkAccept() and checkParam() to refactor
 
-get-req.php:
-    correction bugs,
-    move some things,
-    added header 'Content-Type' to errors,
-    added redirection to './get-music.php'
+fixed glitches and features
 
 get-music.php:
-    Creation of the file,
-    handles music transfer (no FTP),
-    Allow only GET method
+    added POST and HEAD methods support
