@@ -16,8 +16,41 @@ I made an api to get music from my server. This API is public so feel free to tr
 
 
 ## How to make a request
+### Quick explaination
 In order to make a request you have to send a HTTP request to one of the endpoints with the parameter "__`file`__" set to the name of the music you want, the extention (.mp3) is optional.  
 Ex: `curl api.musiques.nils.test.sc2mnrf0802.universe.wf/get-req.php?file=An%20Oasis%20In%20Time`
+
+### Typical request
+Here is the request shown in the last part: 
+```
+GET /get-req.php?file=An%20Oasis%20In%20Time HTTP/1.0
+X-Country-Code: FR
+X-Autonomous-System: 15557
+Host: api.musiques.nils.test.sc2mnrf0802.universe.wf
+X-Forwarded-Proto: http
+User-Agent: curl/8.4.0
+Accept: */*
+Content-Length: 0
+```
+This request will send back the body:
+```
+{
+    "title":  "An oasis in time",
+    "composers": [
+        "Michiru Yamane"
+    ],
+    "track": 39,
+    "commentaire": "",
+    "path": "An Oasis In Time.mp3"
+}
+```
+
+A succeful request will always respond with those 5 fields
++ _String_ __`title`__ : The full title of the music, often the file name.
++ _String[]_ __`composers`__: The composers of the music.
++ _Unsigned Int_ __`track`__: The number of the track.
++ _String_ __`commentaire`__: A comment I writed, often empty.
++ _String_ __`path`__: The path of the file on the server (just the basename of the music).
 
 ## Handled Headers
 
