@@ -1,7 +1,12 @@
-moved all functions (not methods) in functions.php.
-Created functions checkAccept() and checkParam() to refactor
+Ajout doc dans README.md
+class.php:
+    -ajout sécurité, il lancera une erreur si le fichier n'est pas un .mp3
+    -update l206
 
-fixed glitches and features
+functions.php:
+    -définition des constantes si non définies precedament
+    -fix bugs et raccoucit dans redirect()
 
-get-music.php:
-    added POST and HEAD methods support
+get-*.php:
+    -le module retournera les erreurs et l'outupt (sauf get-music qui ne retourne que les erreurs) même si la méthode HEAD est utilisée
+    -utilisation de la méthode ServerError::constructFromThrowable() en cas d'erreur PHP (la méthode existait avant, c'est juste que l'on ne l'utilisait pas)

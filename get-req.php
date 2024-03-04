@@ -38,21 +38,20 @@
         if(!$head_method)
             $music = Music::getFromFile($req["file"]);
             echo $music->jsonEncode();
-            return $music->jsonEncode();
+        return $music->jsonEncode();
     }catch(ServerError $err){
         header('Content-Language: en');
         header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
         
-        if(!$head_method)
-            echo $err->toJson();
-            return $err->toJson();
+        if(!$head_method){echo $err->toJson();}
+        return $err->toJson();
+        
     }catch(Throwable $err){
         header('Content-Language: en');
         header('Content-Type: application/json; charset=utf-8', true, 500);
         
-        if(!$head_method)
-            $e = new ServerError($err->getMessage(), 0);
-            echo $e->toJson();
-            return $e->toJson();
+        $e = ServerError::constructFromThrowable($err, 'Unexpected error');
+        if(!$head_method){echo $e->toJson();}
+        return $e->toJson();
     }
 ?>

@@ -1,4 +1,7 @@
 <?php
+if(empty(HEADERS)){define('HEADERS', getallheaders());}
+if(empty(PAGE)){define('PAGE', basename(__FILE__, '.php'));}
+
 /**
  * Transforme $arr en string de la forme '$autour$arr[0]$autour$sep$autour$arr[1]$autour...'; par exemple echo arrayToString(["moi", "toi"], ' + ', '"'); //"moi" + "toi"
  * @param array $arr l'array à être transformé
@@ -99,9 +102,10 @@ function ret_array_key_if_defined(array $arr, string|int $key, $default=null) : 
  * @throws ServerError Si !( 299 < $code < 399) lève une ServerError
  */ 
 function redirect(string $url, ?array $paramName = null, ?array $paramValue = null, bool $replaceHeaders = true, int $code = 308, ?string ...$headers) : void{
-    if(str_ends_with($url, PAGE . '.php')){//if redirects on this page
+    if(str_ends_with($url, PAGE . '.php') || str_contains($url, PAGE . '.php?')){//if redirects on this page
         return;
     }
+    if($url == 'index.php'){$url = 'get-req.php';}//index.php will redirect on get-req.php regardless of the request (and will lose the headers)
     
     if($code > 399 || $code < 299){
         throw new ServerError("Cannot redirect with the code: '$code'", 500, "function redirect()");

@@ -35,19 +35,22 @@
         $music = Music::getFromFile($req['file']);
 
         header("Content-Type: text/html; charset=utf-8");
+        $return = "<audio src='". Music::STORAGE_URL . $req['file'] ."' type='audio/mp3' controls autoplay></audio>";
         if(!$head_method)
-            echo "<audio src='". Music::STORAGE_URL . $req['file'] ."' type='audio/mp3' controls autoplay></audio>";
+            echo $return;
+        return $return;
     }catch(ServerError $err){
         header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
 
-        echo $err->toJson();
+        if(!$head_method){echo $err->toJson();}
         return $err->toJson();
         
     }catch(Throwable $err){
         header('Content-Type: application/json; charset=utf-8', true, 500);
 
-        $e = new ServerError($err->getMessage(), 0);
-        echo $e->toJson();
+        
+        $e = ServerError::constructFromThrowable($err, 'Unexpected error');
+        if(!$head_method){echo $e->toJson();}
         return $e->toJson();
     }
 ?>

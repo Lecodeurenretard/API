@@ -162,7 +162,9 @@ class Music {
         $song = ret_array_key_if_defined($music->tags, 'song', '');
         $artist = explode('/', ret_array_key_if_defined($music->tags, 'artist', ''));        
         $track = ret_array_key_if_defined($music->tags, 'track', -1);        
-        $comment = ret_array_key_if_defined($music->tags, 'comment','');    
+        $comment = ret_array_key_if_defined($music->tags, 'comment','');
+        
+        if(str_ends_with($path, '.mp3')){throw new ServerError("File $path is not mp3 audio!");}
 
         $this->set($song, $artist, $track, $comment, $path);
     }
@@ -201,7 +203,7 @@ class ServerError extends ErrorException{
     private string $misc; 
     public function __construct(string $message, int $code=0, string $misc=''){
         $this->message = $message;
-        if(empty(self::code_list[$code])){$code = 0;}
+        if(!array_key_exists($code, self::code_list)){$code = 0;}
         $this->code = $code;
         $this->name = self::code_list[$code];
         $this->misc = $misc;

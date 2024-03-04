@@ -3,9 +3,10 @@
     define('PAGE', 'music');
     require("class.php");
     
+    $head_method = false;
+    $method = $_SERVER['REQUEST_METHOD'];
+    
     try{
-        $head_method = false;
-        $method = $_SERVER['REQUEST_METHOD'];
         switch($method){
             
             case "HEAD":
@@ -34,19 +35,19 @@
         header("Content-Type: audio/mp3");
         header("Content-Location: " . Music::STORAGE_URL . $_GET['file']);
 
-        if($head_method)
+        if(!$head_method)
             readfile(Music::STORAGE_PATH . '/' . urldecode($_GET["file"]));
     }catch(ServerError $err){
         header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
 
-        echo $err->toJson();
+        if(!$head_method){echo $err->toJson();}
         return $err->toJson();
-        
+
     }catch(Throwable $err){
         header('Content-Type: application/json; charset=utf-8', true, 500);
 
-        $e = new ServerError($err->getMessage(), 0);
-        echo $e->toJson();
+        $e = ServerError::constructFromThrowable($err, 'Unexpected error');
+        if(!$head_method){echo $e->toJson();}
         return $e->toJson();
     }
 ?>
