@@ -2,7 +2,7 @@
 require("vendor/autoload.php");
 use wapmorgan\Mp3Info\Mp3Info;
 
-require("functions.php");
+include_once("functions.php");
 /**
  * Représente un fichier musique .mp3
  */
@@ -25,16 +25,20 @@ class Music {
     /** @var string Le commentaire laissé*/    
     public string $commentaire;
 
+    /** @var string L'album duquel la musique est issue*/    
+    public string $album;
+
     /** @var string  Le chemin pour accéder au fichier à partir de /api*/
     private string $path;
 
     private string $fullPath = self::STORAGE_URL;
-    public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $path){
+    public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $album="", string $path){
         if(empty($path) && $path !==''){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
         $this->title = (isset($title))? $title : '';
         $this->composers = (isset($composers))? $composers : [];
         $this->track = (isset($track))? $track: -1;
         $this->commentaire = isset($commentaire)? $commentaire : '';
+        $this->album = isset($album)? $album : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
 
@@ -47,6 +51,7 @@ class Music {
             "composers"=> serialize($this->composers),
             "track"=> $this->track,
             "commentaire"=> $this->commentaire,
+            "album" => $this->album,
             "path" => $this->path
         ];
     }
@@ -56,28 +61,31 @@ class Music {
         $this->composers = unserialize($data["composers"]);
         $this->track = $data["track"];
         $this->commentaire = $data["commentaire"];
+        $this->album = $data["album"];
         $this->path = $data["path"];
         $this->fullPath = Music::STORAGE_URL . $this->path;
     }
 
     public function __toString() : string{
-        return $this->title . " (" . implode(", ", $this->composers) . '; ' . $this->track .")";
-    }
+        return $this->title . " (" . implode(", ", $this->composers) . '; ' . $this->track . "; in " . $this->album .")";
+        //title (composer1, composer2, ...; track; in album)
+    }   
 
     /**
      * Convertit l'objet courant en JSON
      */
     public function jsonEncode() : string{
         return  //on fait en sorte qu'un humain puisse lire la sortie
-            '{ '                                                                                        . PHP_EOL .
-            '    "title":  "'. $this->title.'",'                                                        . PHP_EOL . 
-            '    "composers": ['                                                                        . PHP_EOL .
-            '        ' . arrayToString($this->composers, ','                                            . PHP_EOL .
-            '        ', '"')                                                                            . PHP_EOL .
-            '    ],'                                                                                    . PHP_EOL .
-            '    "track": '. $this->track.','                                                             . PHP_EOL . 
-            '    "commentaire": "'. $this->commentaire.'",'                                             . PHP_EOL .
-            '    "path": "' . $this->path .'"'                                                          . PHP_EOL .
+            '{ '                                                         . PHP_EOL .
+            '    "title":  "'. $this->title.'",'                         . PHP_EOL . 
+            '    "composers": ['                                         . PHP_EOL .
+            '        ' . arrayToString($this->composers, ','             . PHP_EOL .
+            '        ', '"')                                             . PHP_EOL .
+            '    ],'                                                     . PHP_EOL .
+            '    "track": '. $this->track.','                            . PHP_EOL . 
+            '    "album": "'. $this->album.'",'                          . PHP_EOL . 
+            '    "commentaire": "'. $this->commentaire.'",'              . PHP_EOL .
+            '    "path": "' . $this->path .'"'                           . PHP_EOL .
             '}';
 
     }
@@ -87,19 +95,20 @@ class Music {
      * @param self $json Le json encodé par Music->jsonEncode()
      * @throws ServerError Lance une ServerError si $json n'est pas un objet Music
      */
-    static function jsonDecode(string $json) : self{
+    static public function jsonDecode(string $json) : self{
         $obj = json_decode($json, false, 3);
         if(
             empty($obj->title) 
             || empty($obj->composers) 
             || empty($obj->track) 
             || empty($obj->commentaire) 
+            || empty($obj->album)
             || empty($obj->path)
             ){
                 throw new ServerError("The object given to decode is not a Music object at line " . __LINE__ . " from: " . __FILE__, 500, "json given: " . $json);
             }
         
-        return new Music($obj->title, explode('/', $obj->composers), $obj->track, $obj->commentaire, $obj->path);
+        return new Music($obj->title, explode('/', $obj->composers), $obj->track, $obj->commentaire, $obj->album, $obj->path);
     }
     
     /**
@@ -117,21 +126,23 @@ class Music {
      * Set les fields de $this aux fields de $obj 
      */
     protected function setTo(self $obj){
-        $this->title = $obj->title;
-        $this->composers = $obj->composers;
-        $this->track = $obj->track;
-        $this->commentaire = $obj->commentaire;
-        $this->path = $obj->path;
-        $this->fullPath = $obj->fullPath;
+        $this->title        = $obj->title;
+        $this->composers    = $obj->composers;
+        $this->track        = $obj->track;
+        $this->commentaire  = $obj->commentaire;
+        $this->album        = $obj->album;
+        $this->path         = $obj->path;
+        $this->fullPath     = $obj->fullPath;
     }
 
     /**
      * Set les fields de $this suivant les arguments
      */
-    private function set(?string $title, ?array $composers, ?int $track, ?string $commentaire="", string $path){
+    private function set(?string $title, ?array $composers, ?int $track, ?string $album, ?string $commentaire="", string $path){
         $this->title        =    isset($title)      ? $title       : '';
         $this->composers    =    isset($composers)  ? $composers   : [];
         $this->track        =    isset($track)      ? $track       : -1;
+        $this->album        =    isset($album)      ? $album       : '';
         $this->commentaire  =    isset($commentaire)? $commentaire : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
@@ -152,21 +163,27 @@ class Music {
         return $obj->isEqual(MusicdefaultObject);
     }
 
+    static private function getDefault() : Music{
+        return MusicdefaultObject;
+    }
+
     /**
      * Cherche la musique et set l'objet courant.
      * @param string $path Le chemin (à partir de /api/) du fichier, ex: ex.mp3 pour  /home/sc2mnrf0802/nils.test.musiques.wf/api/ex.mp3
      */
-    public function setFromFile(string $path) : void{
+    public function setFromFile(string $path) : self{
         $music = new Mp3Info(Music::STORAGE_PATH . $path, true);
         
         $song = ret_array_key_if_defined($music->tags, 'song', '');
         $artist = explode('/', ret_array_key_if_defined($music->tags, 'artist', ''));        
         $track = ret_array_key_if_defined($music->tags, 'track', -1);        
+        $album = ret_array_key_if_defined($music->tags, 'album', '');        
         $comment = ret_array_key_if_defined($music->tags, 'comment','');
         
-        if(str_ends_with($path, '.mp3')){throw new ServerError("File $path is not mp3 audio!");}
+        if(!str_ends_with($path, '.mp3')){throw new ServerError("File $path is not mp3 audio!");}
 
-        $this->set($song, $artist, $track, $comment, $path);
+        $this->set($song, $artist, $track, $album, $comment, $path);
+        return $this;
     }
 
     /**
@@ -174,13 +191,11 @@ class Music {
      * @param string $path Le chemin (à partir de /api/) du fichier 
      */
     public static function getFromFile(string $path) : Music{
-        $ret = MusicdefaultObject;
-        $ret->setFromFile($path);
-        return $ret;
+        return self::getDefault()->setFromFile($path);
     }
 }
 /** @var Music Représente l'objet par défaut */
-const MusicdefaultObject = new Music('', [], -1, '', '');
+const MusicdefaultObject = new Music('', [], -1, '', '', '');
 
 class ServerError extends ErrorException{
     const code_list = [

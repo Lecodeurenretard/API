@@ -1,12 +1,8 @@
-Ajout doc dans README.md
 class.php:
-    -ajout sécurité, il lancera une erreur si le fichier n'est pas un .mp3
-    -update l206
+    -added "album" field in response,
+    -setFromFile() returns now $this,
+    -added private function Music::getDefault() which returns MusicdefaultObject (useful for setters)
 
-functions.php:
-    -définition des constantes si non définies precedament
-    -fix bugs et raccoucit dans redirect()
+get-req.php becomes get-json.php
 
-get-*.php:
-    -le module retournera les erreurs et l'outupt (sauf get-music qui ne retourne que les erreurs) même si la méthode HEAD est utilisée
-    -utilisation de la méthode ServerError::constructFromThrowable() en cas d'erreur PHP (la méthode existait avant, c'est juste que l'on ne l'utilisait pas)
+Updates et corrections doc dans README.md

@@ -1,4 +1,5 @@
 <?php
+include_once("class.php");
 if(empty(HEADERS)){define('HEADERS', getallheaders());}
 if(empty(PAGE)){define('PAGE', basename(__FILE__, '.php'));}
 
@@ -297,5 +298,7 @@ function checkParam(array | string &$req){
     
     }else if(!str_contains(realpath($internalpath), Music::STORAGE_PATH)){  //on vérifie que le script ne cherche pas en dehors du bon dossier
         throw new ServerError("The specified path leads outside the 'api' folder", 403, (realpath($externalpath) === false)? 'realpath() failed' : "attempt to access " . realpath($externalpath));
+    }elseif(!str_ends_with($req["file"], '.mp3')){
+        throw new ServerError("Can't open this file", 400);
     }
 }
