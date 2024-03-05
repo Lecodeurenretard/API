@@ -1,17 +1,25 @@
 <?php
 include_once("class.php");
-if(empty(HEADERS)){define('HEADERS', getallheaders());}
+if(empty(HEADERS)){define('HEADERS', getallHEADERS());}
 if(empty(PAGE)){define('PAGE', basename(__FILE__, '.php'));}
 
 /**
  * Transforme $arr en string de la forme '$autour$arr[0]$autour$sep$autour$arr[1]$autour...'; par exemple echo arrayToString(["moi", "toi"], ' + ', '"'); //"moi" + "toi"
  * @param array $arr l'array à être transformé
  * @param string $sep =', ' | le séparateur
- * @param string $autour ='' | ce qui entoure chaque élément
+ * @param string|array $autour ='' | ce qui entoure chaque élément; si array, v.ex: arrayToString(["jojo", "lui"], ' ', ['<', '>]) = "<jojo> <lui>"; si array et le nb d'élément est 1, fait comme si ce n'était pas un tableau
  * @param bool $keys =false | Si l'on doit afficher les clefs
  * @return string tous les éléments de $arr avec entre eux $sep
  */
-function arrayToString(array $arr, string $sep=', ', string $autour='', $keys = false) : string{
+function arrayToString(array $arr, string $sep=', ', string|array $autour='', $keys = false) : string{
+    if(gettype($autour)=='array' && count($autour)>=2){
+        $ret = '';
+        foreach($arr as $i => $elem){
+            $ret .= $autour[0] . ($keys? $i . $autour[1] . ': ' . $autour[0] : '') . $elem . $autour[1] . $sep;
+        }
+        return rtrim($ret, $sep);   //enlève le dernier séparateur
+    }elseif(gettype($autour)=='array' && count($autour)<2){$autour = $autour[0];}
+    
     $ret = '';
     foreach($arr as $i => $elem){
         $ret .= $autour . ($keys? $i . $autour . ': ' . $autour : '') . $elem . $autour . $sep;
@@ -97,7 +105,7 @@ function ret_array_key_if_defined(array $arr, string|int $key, $default=null) : 
  * @param string $url l'url de redirection
  * @param ?array $paramName =null | Le nom des paramètres à passer à l'url, si n'est pas de la même longueur que $paramValue, sera ingnoré.
  * @param ?array $paramValue =null | La valeur des paramètres à passer à l'url, si n'est pas de la même longueur que $paramName, sera ingnoré.
- * @param bool $replaceHeaders =true | Le deuxième argument de header()
+ * @param bool $replaceHeaders=true | Le deuxième argument de header()
  * @param int $code =308 | Le code de la réponse http à envoyer.
  * @param string ...$headers | Les headers à envoyer à la place de ceux reçus, si pas set, la fonction enverra les headers des la page
  * @throws ServerError Si !( 299 < $code < 399) lève une ServerError
@@ -106,7 +114,7 @@ function redirect(string $url, ?array $paramName = null, ?array $paramValue = nu
     if(str_ends_with($url, PAGE . '.php') || str_contains($url, PAGE . '.php?')){//if redirects on this page
         return;
     }
-    if($url == 'index.php'){$url = 'get-req.php';}//index.php will redirect on get-req.php regardless of the request (and will lose the headers)
+    if($url == 'index.php'){$url = 'get-json.php';}//index.php will redirect on get-json.php regardless of the request (and will lose the headers)
     
     if($code > 399 || $code < 299){
         throw new ServerError("Cannot redirect with the code: '$code'", 500, "function redirect()");
@@ -231,10 +239,6 @@ function parseAcceptHeader() : Array{
  * @param array $req The request in an associative array
  */
 function checkAccept(array $req){
-    if(!array_key_exists('file', $req) || empty($req['file']) || $req['file'] == ''){
-        throw new ServerError('Parameter "file" is missing or empty', 400);
-    }
-
     if(array_key_exists('Accept-Language', HEADERS) && !str_contains(HEADERS['Accept-Language'], '*') && !str_contains(HEADERS['Accept-Language'], 'en')){
         throw new ServerError("Cannot provide language other that english");
     }
@@ -243,7 +247,12 @@ function checkAccept(array $req){
         throw new ServerError("Cannot provide another charset that utf-8", 406);
     }
 
-    if(verifyAcceptsType('audio', 'mp3') && (isMaxWeightAndAvailble('audio/mp3') || isMaxWeightAndAvailble('audio/*')) && !isMaxWeightAndAvailble('application/json')){    //if exepct audio/mp3 redirect to get-music.php, par défaut on envoie application/json
+    if(isMaxWeightAndAvailble('*/*')){//the representation by default is the one we first requested
+        redirect('get-' . PAGE . '.php', ['file'], [$req['file']]);
+        return;
+    }
+
+    if(verifyAcceptsType('audio', 'mp3') && (isMaxWeightAndAvailble('audio/mp3') || isMaxWeightAndAvailble('audio/*'))){    //if exepct audio/mp3 redirect to get-music.php, par défaut on envoie application/json
        redirect('get-music.php', ['file'], [$req['file']]);
        return;
     }/*in comment because don't work well
@@ -251,12 +260,12 @@ function checkAccept(array $req){
         throw new ServerError("Can only give mp3 audio files", 406);
     }*/
 
-    else if(verifyAcceptsType('text', 'html') && (isMaxWeightAndAvailble('text/html') || isMaxWeightAndAvailble('text/*'))  && !isMaxWeightAndAvailble('application/json')){
+    else if(verifyAcceptsType('text', 'html') && (isMaxWeightAndAvailble('text/html') || isMaxWeightAndAvailble('text/*'))){
         redirect('get-html.php', ['file'], [$req['file']]);
         return;
     }
-    else if(verifyAcceptsType('application', 'json')){    // don't accept JSONs
-        redirect('get-req.php', ['file'], [$req['file']]);
+    else if(verifyAcceptsType('application', 'json') || verifyAcceptsType('application', 'xml')){
+        redirect('get-json.php', ['file'], [$req['file']]);
         return;
     }
     
@@ -272,7 +281,11 @@ function checkAccept(array $req){
  * Check if the param file is good, if not throws a ServerError 
  * @param array|string $req the request array, if it's a string handle this parameter by $req = ["file" => $req];
  */
-function checkParam(array | string &$req){
+function checkParamFile(array | string &$req){
+    if(!array_key_exists('file', $req) || empty($req['file']) || $req['file'] == ''){
+        throw new ServerError('Parameter "file" is missing or empty', 400);
+    }
+
     if(gettype($req) == "string"){
         $req = ["file" => $req];
 
@@ -301,4 +314,38 @@ function checkParam(array | string &$req){
     }elseif(!str_ends_with($req["file"], '.mp3')){
         throw new ServerError("Can't open this file", 400);
     }
+}
+
+/**
+ * Checks if $request[$params] are booleans
+ * @param array $request The request like $_GET
+ * @param  string|array $params 
+ * @return bool If all $params are booleans return true
+ */
+function checkIfParamBool(array $request, string|array $params) : bool{
+    if(gettype($params) == "string"){$params = [$params];}
+    
+    foreach($request as $name=>$value){
+        if(
+            in_array($name, $params) 
+            && $value != 'true' 
+            && $value != 'false' 
+            && $value != 1 
+            && $value != 0
+        ){
+            return false;
+        }
+    }
+    return !in_array($name, $params);
+}
+
+/**
+ * Convert $str in PHP bool
+ * @return ?bool returns null if can't read it
+ */
+function readBoolString(string $str): ?bool{
+    if($str == '1' || $str == 'true'){return true;}
+    if($str == '0' || $str == 'false'){return false;}
+    
+    return null;
 }

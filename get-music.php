@@ -30,7 +30,7 @@
         }
 
         checkAccept($req);
-        checkParam($req);
+        checkParamFile($req);
         
         header("Content-Type: audio/mp3");
         header("Content-Location: " . Music::STORAGE_URL . $_GET['file']);

@@ -71,6 +71,11 @@ class Music {
         //title (composer1, composer2, ...; track; in album)
     }   
 
+    public function toHTML() : string{
+        return "<p><span class='music-title'>$this->title </span> (<span class='music-artists'>" . arrayToString($this->composers) . "</span>; <span class='music-track'> $this->track </span>; in <span class='music-album'>$this->album</span>)";
+        //title (composer1, composer2, ...; track; in album)
+    }   
+
     /**
      * Convertit l'objet courant en JSON
      */
@@ -121,6 +126,26 @@ class Music {
         $this->setTo($decoded);
         return $decoded;
     }
+
+    /**
+     * Convertit l'objet courant en XML
+     */
+    public function XMLEncode() : string{
+        return  //on fait en sorte qu'un humain puisse lire la sortie
+            '<music> '                                                                              . PHP_EOL .
+            '    <title>'. $this->title.'</title>'                                                  . PHP_EOL . 
+            '    <composers>'                                                                       . PHP_EOL .
+            '        ' . arrayToString($this->composers, PHP_EOL, ['<composer>', '</composer>'])    . PHP_EOL .
+            '    </composers>'                                                                      . PHP_EOL .
+            '    <track>'. $this->track.'</track>'                                                  . PHP_EOL . 
+            '    <album>'. $this->album.'</album>'                                                  . PHP_EOL . 
+            '    <commentaire>'. $this->commentaire.'</commentaire>'                                . PHP_EOL .
+            '    <path>' . $this->path .'</path>'                                                   . PHP_EOL .
+            '</music>';
+
+    }
+
+    
 
     /**
      * Set les fields de $this aux fields de $obj 

@@ -3,7 +3,7 @@
 I made an api to get music from my server. This API is public so feel free to try at <api.musiques.nils.test.sc2mnrf0802.universe.wf>   
 
 ## URIs  
-- `get-json.php`: Give the JSON format of the requested ressource. 
+- `get-json.php`: Give the JSON or XML format of the requested ressource. 
 
    
 - `get-music.php`: Give the mp3 file of the requested ressource, request other type (like .wav) will send an error.  
@@ -45,6 +45,19 @@ This request will send back the body:
     "path": "An Oasis In Time.mp3"
 }
 ```
+If the header `Accept` is set to `application/xml` the body will look like this:
+```
+<music>
+    <title>An oasis in time</title>
+    <composers>
+        <composer>Michiru Yamane</composer>
+    </composers>
+    <track>39</track>
+    <album>Skullgirls</album>
+    <commentaire></commentaire>
+    <path>An Oasis In Time.mp3</path>
+</music>
+```
 
 A succeful request will always respond with those 5 fields
 + _String_ __`title`__ : The full title of the music, often the file name.
@@ -54,11 +67,28 @@ A succeful request will always respond with those 5 fields
 + _String_ __`commentaire`__: A comment I writed, often empty.
 + _String_ __`path`__: The path of the file on the server (just the basename of the music).
 
+### Particularities:
++ __get-req.php__: You can set a boolean parameter `title` to _true_ to get an intro. 
+You can get a response:
+```
+<div class="music-head">
+    <p><span class="music-title">An oasis in time </span> (<span class="music-artists">Michiru Yamane</span>; <span class="music-track"> 39 </span>; in <span class="music-album">Skullgirls</span>)</p>
+</div>
+<audio src="http://musiques.nils.test.sc2mnrf0802.universe.wf/api/An Oasis In Time.mp3" type="audio/mp3" controls="" autoplay=""></audio>
+```
+<div class="music-head">
+    <p><span class="music-title">An oasis in time </span> (<span class="music-artists">Michiru Yamane</span>; <span class="music-track"> 39 </span>; in <span class="music-album">Skullgirls</span>)</p>
+</div>
+<audio src="http://musiques.nils.test.sc2mnrf0802.universe.wf/api/An Oasis In Time.mp3" type="audio/mp3" controls="" autoplay=""></audio>
+
+The `p` element has the class `music-head`, the title `music-title`, the artists `music-artists`, ...
+
 ## Handled Headers
 
 - `Accept`: The MIME types expected separated by a comma(`,`), possibility to give the weight argument (`q`). ex: `Accept: application/json, */*; q=0.7`. 
     ### Accepted types: 
     + application/json (default),
+    + application/xml,
     + audio/mp3,
     + text/html
 - `Accept-Charset`: The accepted charset. Can only provide __utf-8__.

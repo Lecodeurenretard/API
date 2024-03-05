@@ -1,8 +1,17 @@
 class.php:
-    -added "album" field in response,
-    -setFromFile() returns now $this,
-    -added private function Music::getDefault() which returns MusicdefaultObject (useful for setters)
+    -Creation methods: Music->XMLEncode() and Music->toHTML()
+
+functions.php:
+    -checkParam() renamed in checkParamFile()
+    -modif arrayToString() to handle $autour as an array
+    -created functions checkIfParamBool() and readBoolString()
+
+get-html:
+    -Title of the music can be added
 
 get-req.php becomes get-json.php
 
-Updates et corrections doc dans README.md
+Updated doc
+
+request:
+    */* meaning changes with the page (text/html for get-html, audio/mp3 for get-music,...)

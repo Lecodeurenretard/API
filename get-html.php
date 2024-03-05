@@ -30,12 +30,21 @@
         }
 
         checkAccept($req);
-        checkParam($req);
+        checkParamFile($req);
 
         $music = Music::getFromFile($req['file']);
-
-        header("Content-Type: text/html; charset=utf-8");
-        $return = "<audio src='". Music::STORAGE_URL . $req['file'] ."' type='audio/mp3' controls autoplay></audio>";
+        $return = '';
+        if(array_key_exists('title', $req) && readBoolString($req['title'] == null)){throw new ServerError("Parameter title incorrect, it must be equal to 'true' or 'false'", 400);}
+        if(
+            array_key_exists('title', $req) 
+            && readBoolString($req['title'])        
+        ){
+            $return = "<div class='music-head'>" . Music::getFromFile($req['file'])->toHTML() . '</div>';
+        }
+        
+        $return .= "<audio src='". Music::STORAGE_URL . $req['file'] ."' type='audio/mp3' controls autoplay></audio>";
+        
+        header("Content-Type: text/html; charset=utf-8"); 
         if(!$head_method)
             echo $return;
         return $return;

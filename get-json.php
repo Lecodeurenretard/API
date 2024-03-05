@@ -1,6 +1,6 @@
 <?php   
     define('HEADERS', getallheaders());
-    define('PAGE', 'req');
+    define('PAGE', 'json');
     try{
         require("class.php");
 
@@ -30,15 +30,22 @@
 
         $parsed_Accept = parseAcceptHeader(); 
 
-        checkAccept($req);
-        checkParam($req);
-
+        checkAccept($req);  //redirects so should be before
+        checkParamFile($req);
 
         $music = Music::getFromFile($req["file"]);
-        header('Content-Type: application/json; charset=utf-8', true, 200);
-        if(!$head_method)          
-            echo $music->jsonEncode();  //send ressource
-        return $music->jsonEncode();
+
+        if(isMaxWeightAndAvailble('application/xml')){
+            
+            header('Content-Type: application/json; charset=utf-8', true, 200);
+            if(!$head_method)          
+                echo $music->jsonEncode();  //send ressource
+            return $music->jsonEncode();
+        }
+
+        header('Content-Type: application/xml; charset=utf-8', true, 200);
+        if(!$head_method){echo $music->XMLEncode();}
+        return $music->XMLEncode();
     }catch(ServerError $err){
         header('Content-Language: en');
         header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
