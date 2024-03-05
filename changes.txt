@@ -1,3 +1,4 @@
+Ajout doc dans README.md
 class.php:
     -Creation methods: Music->XMLEncode() and Music->toHTML()
 
@@ -9,7 +10,9 @@ functions.php:
 get-html:
     -Title of the music can be added
 
-get-req.php becomes get-json.php
+functions.php:
+    -définition des constantes si non définies precedament
+    -fix bugs et raccoucit dans redirect()
 
 Updated doc
 
