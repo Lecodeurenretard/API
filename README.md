@@ -69,7 +69,7 @@ A succeful request will always respond with those 5 fields
 + _String_ __`path`__: The path of the file on the server (just the basename of the music).
 
 ### Particular URIs:
-+ __get-html.php__: You can set a boolean parameter `title` to _true_ to get an intro. 
++ __[get-html](get-html.php)__: You can set a boolean parameter `title` to _true_ to get an intro. 
 You can get a response:
 ```
 <div class="music-head">
@@ -81,9 +81,9 @@ You can get a response:
 The `p` element has the class `music-head`, the title `music-title`, the artists `music-artists`, ...
 
 
-+ __get-json__: You can inculde the `indent=`_`n`_ parameter to get the request with _`n`_ indent, the returned indent is in the header `Body-Indent`.
++ __[get-json](get-json.php)__: You can inculde the `indent=`_`n`_ parameter to get the request with _`n`_ indent, the returned indent is in the header `Body-Indent`.
 
-+ __list.php__: This endpoint will send back a list of responses so you will get somthing like this:
++ __[list](list.php)__: This endpoint will send back a list of responses so you will get somthing like this:
 ```
 [
     {
