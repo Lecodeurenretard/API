@@ -1,8 +1,8 @@
 <?php
-require("vendor/autoload.php");
+include("vendor/autoload.php");
 use wapmorgan\Mp3Info\Mp3Info;
 
-require("functions.php");
+include_once("functions.php");
 /**
  * Représente un fichier musique .mp3
  */
@@ -25,29 +25,34 @@ class Music {
     /** @var string Le commentaire laissé*/    
     public string $commentaire;
 
+    /** @var string L'album duquel la musique est issue*/    
+    public string $album;
+
     /** @var string  Le chemin pour accéder au fichier à partir de /api*/
     private string $path;
 
     private string $fullPath = self::STORAGE_URL;
-    public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $path){
-        if(empty($path) && $path !==''){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
+    public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $album="", string $path){        if(empty($path) && $path !==''){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
+    if(empty($path) && $path !==''){throw new ServerError("Cannot set a Music object  with empty path", 500);}
         $this->title = (isset($title))? $title : '';
         $this->composers = (isset($composers))? $composers : [];
         $this->track = (isset($track))? $track: -1;
         $this->commentaire = isset($commentaire)? $commentaire : '';
+        $this->album = isset($album)? $album : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
 
-        if($this->title===$this->commentaire && $this->title===''&&$this->track===-1&&$this->composers===[] && $path!==''){$this->setFromFile($path);}
+        if($this->title===$this->commentaire && $this->title===''&& $this->album==''&&$this->track===-1&&$this->composers===[] && $path!==''){$this->setFromFile($path);}
     }
 
     public function __serialize() : array{
         return [
-            "title"=> $this->title,
-            "composers"=> serialize($this->composers),
-            "track"=> $this->track,
-            "commentaire"=> $this->commentaire,
-            "path" => $this->path
+            "title"         => $this->title,
+            "composers"     => serialize($this->composers),
+            "track"         => $this->track,
+            "album"         => $this->album,
+            "commentaire"   => $this->commentaire,
+            "path"          => $this->path
         ];
     }
  
@@ -55,35 +60,39 @@ class Music {
         $this->title = $data["title"];
         $this->composers = unserialize($data["composers"]);
         $this->track = $data["track"];
+        $this->album = $data["album"];
         $this->commentaire = $data["commentaire"];
         $this->path = $data["path"];
         $this->fullPath = Music::STORAGE_URL . $this->path;
     }
 
     public function __toString() : string{
-        return $this->title . " (" . implode(", ", $this->composers) . '; ' . $this->track .")";
-    }
-
+        return $this->title . " (" . implode(", ", $this->composers) . '; ' . $this->track . "; in " . $this->album .")";
+        //title (composer1, composer2, ...; track; in album)
+    }   
     public function toHTML() : string{
         return "<p><span class='music-title'>$this->title </span> (<span class='music-artists'>" . arrayToString($this->composers) . "</span>; <span class='music-track'> $this->track </span>; in <span class='music-album'>$this->album</span>)";
         //title (composer1, composer2, ...; track; in album)
     }   
 
+    
     /**
      * Convertit l'objet courant en JSON
+     * @param int $baseIndent =0| L'indentation de base
      */
-    public function jsonEncode() : string{
+    public function jsonEncode(int $baseIndent=0) : string{
+        $indent = str_repeat("\t", $baseIndent);
         return  //on fait en sorte qu'un humain puisse lire la sortie
-            '{ '                                                                                        . PHP_EOL .
-            '    "title":  "'. $this->title.'",'                                                        . PHP_EOL . 
-            '    "composers": ['                                                                        . PHP_EOL .
-            '        ' . arrayToString($this->composers, ','                                            . PHP_EOL .
-            '        ', '"')                                                                            . PHP_EOL .
-            '    ],'                                                                                    . PHP_EOL .
-            '    "track": '. $this->track.','                                                             . PHP_EOL . 
-            '    "commentaire": "'. $this->commentaire.'",'                                             . PHP_EOL .
-            '    "path": "' . $this->path .'"'                                                          . PHP_EOL .
-            '}';
+        $indent .'{'                                                                                . PHP_EOL .
+            $indent . "\t" . '"title":  "'. $this->title.'",'                                       . PHP_EOL . 
+            $indent . "\t" . '"composers": ['                                                       . PHP_EOL .
+            $indent . "\t" . arrayToString($this->composers, PHP_EOL, '"', false, $baseIndent)      . PHP_EOL .
+            $indent . "\t" . '],'                                                                   . PHP_EOL .
+            $indent . "\t" . '"track": '. $this->track.','                                          . PHP_EOL . 
+            $indent . "\t" . '"album": "'. $this->album.'",'                                        . PHP_EOL . 
+            $indent . "\t" . '"commentaire": "'. $this->commentaire.'",'                            . PHP_EOL .
+            $indent . "\t" . '"path": "' . $this->path .'"'                                         . PHP_EOL .   
+        $indent .'}';
 
     }
 
@@ -92,19 +101,20 @@ class Music {
      * @param self $json Le json encodé par Music->jsonEncode()
      * @throws ServerError Lance une ServerError si $json n'est pas un objet Music
      */
-    static function jsonDecode(string $json) : self{
+    public static function jsonDecode(string $json) : self{
         $obj = json_decode($json, false, 3);
         if(
             empty($obj->title) 
             || empty($obj->composers) 
             || empty($obj->track) 
+            || empty($obj->album)
             || empty($obj->commentaire) 
             || empty($obj->path)
             ){
                 throw new ServerError("The object given to decode is not a Music object at line " . __LINE__ . " from: " . __FILE__, 500, "json given: " . $json);
             }
         
-        return new Music($obj->title, explode('/', $obj->composers), $obj->track, $obj->commentaire, $obj->path);
+        return new Music($obj->title, explode('/', $obj->composers), $obj->track, $obj->commentaire, $obj->album, $obj->path);
     }
     
     /**
@@ -121,18 +131,19 @@ class Music {
     /**
      * Convertit l'objet courant en XML
      */
-    public function XMLEncode() : string{
+    public function XMLEncode(int $baseIndent=0) : string{
+        $indent = str_repeat("\t", $baseIndent);
         return  //on fait en sorte qu'un humain puisse lire la sortie
-            '<music> '                                                                              . PHP_EOL .
-            '    <title>'. $this->title.'</title>'                                                  . PHP_EOL . 
-            '    <composers>'                                                                       . PHP_EOL .
-            '        ' . arrayToString($this->composers, PHP_EOL, ['<composer>', '</composer>'])    . PHP_EOL .
-            '    </composers>'                                                                      . PHP_EOL .
-            '    <track>'. $this->track.'</track>'                                                  . PHP_EOL . 
-            '    <album>'. $this->album.'</album>'                                                  . PHP_EOL . 
-            '    <commentaire>'. $this->commentaire.'</commentaire>'                                . PHP_EOL .
-            '    <path>' . $this->path .'</path>'                                                   . PHP_EOL .
-            '</music>';
+            $indent . "<music>"                                                                                                 . PHP_EOL .
+            $indent . "\t<title>". $this->title."</title>"                                                                      . PHP_EOL . 
+            $indent . "\t<composers>"                                                                                           . PHP_EOL .
+            $indent . "\t" . arrayToString($this->composers, PHP_EOL, ["<composer>", "</composer>"], false, $baseIndent)      . PHP_EOL .
+            $indent . "\t</composers>"                                                                                          . PHP_EOL .
+            $indent . "\t<track>". $this->track."</track>"                                                                      . PHP_EOL . 
+            $indent . "\t<album>". $this->album."</album>"                                                                      . PHP_EOL . 
+            $indent . "\t<commentaire>". $this->commentaire."</commentaire>"                                                    . PHP_EOL .
+            $indent . "\t<path>" . $this->path ."</path>"                                                                       . PHP_EOL .
+            $indent . "</music>";
 
     }
 
@@ -142,21 +153,23 @@ class Music {
      * Set les fields de $this aux fields de $obj 
      */
     protected function setTo(self $obj){
-        $this->title = $obj->title;
-        $this->composers = $obj->composers;
-        $this->track = $obj->track;
-        $this->commentaire = $obj->commentaire;
-        $this->path = $obj->path;
-        $this->fullPath = $obj->fullPath;
+        $this->title        = $obj->title;
+        $this->composers    = $obj->composers;
+        $this->track        = $obj->track;
+        $this->commentaire  = $obj->commentaire;
+        $this->album        = $obj->album;
+        $this->path         = $obj->path;
+        $this->fullPath     = $obj->fullPath;
     }
 
     /**
      * Set les fields de $this suivant les arguments
      */
-    private function set(?string $title, ?array $composers, ?int $track, ?string $commentaire="", string $path){
+    private function set(?string $title, ?array $composers, ?int $track, ?string $album, ?string $commentaire="", string $path){
         $this->title        =    isset($title)      ? $title       : '';
         $this->composers    =    isset($composers)  ? $composers   : [];
         $this->track        =    isset($track)      ? $track       : -1;
+        $this->album        =    isset($album)      ? $album       : '';
         $this->commentaire  =    isset($commentaire)? $commentaire : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
@@ -176,22 +189,27 @@ class Music {
     public function isDefault(Music $obj) : bool{
         return $obj->isEqual(MusicdefaultObject);
     }
+    static private function getDefault() : Music{
+        return MusicdefaultObject;
+    }
 
     /**
      * Cherche la musique et set l'objet courant.
      * @param string $path Le chemin (à partir de /api/) du fichier, ex: ex.mp3 pour  /home/sc2mnrf0802/nils.test.musiques.wf/api/ex.mp3
      */
-    public function setFromFile(string $path) : void{
+    public function setFromFile(string $path) : self{
         $music = new Mp3Info(Music::STORAGE_PATH . $path, true);
         
         $song = ret_array_key_if_defined($music->tags, 'song', '');
         $artist = explode('/', ret_array_key_if_defined($music->tags, 'artist', ''));        
         $track = ret_array_key_if_defined($music->tags, 'track', -1);        
+        $album = ret_array_key_if_defined($music->tags, 'album','');
         $comment = ret_array_key_if_defined($music->tags, 'comment','');
         
-        if(str_ends_with($path, '.mp3')){throw new ServerError("File $path is not mp3 audio!");}
+        if(!str_ends_with($path, '.mp3')){throw new ServerError("File $path is not mp3 audio!");}
 
-        $this->set($song, $artist, $track, $comment, $path);
+        $this->set($song, $artist, $track, $album, $comment, $path);
+        return $this;
     }
 
     /**
@@ -199,13 +217,11 @@ class Music {
      * @param string $path Le chemin (à partir de /api/) du fichier 
      */
     public static function getFromFile(string $path) : Music{
-        $ret = MusicdefaultObject;
-        $ret->setFromFile($path);
-        return $ret;
+        return self::getDefault()->setFromFile($path);
     }
 }
 /** @var Music Représente l'objet par défaut */
-const MusicdefaultObject = new Music('', [], -1, '', '');
+const MusicdefaultObject = new Music('', [], -1, '', '', '');
 
 class ServerError extends ErrorException{
     const code_list = [
@@ -260,7 +276,7 @@ class ServerError extends ErrorException{
         '   "code": ' . $this->code                                             . ','  . PHP_EOL .
         '   "name": "' . $this->name                                            . '",' . PHP_EOL .
         '   "message": "'. $this->message                                       . '",' . PHP_EOL .
-        '   "stack-trace": "'. $this->getTraceAsString()                        . '",' . PHP_EOL .
+        '   "stack-trace": "'. str_replace($this->getTraceAsString(), PHP_EOL, ''). '",'. PHP_EOL .
         '   "other_info":"' .  $this->misc                                      . '"'  . PHP_EOL .
         '}'                                                                            . PHP_EOL ;
     }

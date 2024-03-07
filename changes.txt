@@ -1,20 +1,19 @@
-Ajout doc dans README.md
+reimplemented album field
+implemented list.php endpoint
 class.php:
-    -Creation methods: Music->XMLEncode() and Music->toHTML()
-
+    -added param $baseIndent in Music->jsonEncode() and Music->XMLEncode()
+    -getDefault() is available again,
+    -the stack trace is now JSON decodable
 functions.php:
-    -checkParam() renamed in checkParamFile()
-    -modif arrayToString() to handle $autour as an array
-    -created functions checkIfParamBool() and readBoolString()
+    -fix bugs
+    -$baseIndent param added in arrayToString()
+    - isMaxWeightAndAvailble() renamed in isMaxWeightAndAvailable()
+    -parseAcceptHeader() can now return an associative array
+    -add choice in redirection in checkAccept()
 
-get-html:
-    -Title of the music can be added
-
-functions.php:
-    -définition des constantes si non définies precedament
-    -fix bugs et raccoucit dans redirect()
+get-json:
+    -the default representation is JSON
+    -param 'indent' added
+    
 
 Updated doc
-
-request:
-    */* meaning changes with the page (text/html for get-html, audio/mp3 for get-music,...)

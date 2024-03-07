@@ -3,27 +3,30 @@
 I made an api to get music from my server. This API is public so feel free to try at <api.musiques.nils.test.sc2mnrf0802.universe.wf>   
 
 ## URIs  
-- `get-json.php`: Give the JSON or XML format of the requested ressource. 
+- `get-json.php`: Gives the JSON or XML format of the requested ressource. 
 
    
-- `get-music.php`: Give the mp3 file of the requested ressource, request other type (like .wav) will send an error.  
+- `get-music.php`: Gives the mp3 file of the requested ressource, request other type (like .wav) will send an error.  
 
 
-- `get-html.php`: Give the HTML format of the requested ressource.    
+- `get-html.php`: Gives the HTML format of the requested ressource.    
 
 
-- `index.php`: Redirects to `get-req.php`; will **lose the headers** so it is not recomended to requests this page instead of `get-req`
+- `list.php`: Gives the list of available musics
+
+
+- `index.php`: Redirects to `get-json.php`; will **lose the headers** so it is not recomended to requests this page instead of `get-req`
 
 
 ## How to make a request
 ### Quick explaination
 In order to make a request you have to send a HTTP request to one of the endpoints with the parameter "__`file`__" set to the name of the music you want, the extention (.mp3) is optional.  
-Ex: `curl api.musiques.nils.test.sc2mnrf0802.universe.wf/get-req.php?file=An%20Oasis%20In%20Time`
+Ex: `curl api.musiques.nils.test.sc2mnrf0802.universe.wf/get-json.php?file=An%20Oasis%20In%20Time`
 
 ### Typical request
 Here is the request shown in the last part: 
 ```
-GET /get-req.php?file=An%20Oasis%20In%20Time HTTP/1.0
+GET /get-json.php?file=An%20Oasis%20In%20Time HTTP/1.0
 X-Country-Code: FR
 X-Autonomous-System: 15557
 Host: api.musiques.nils.test.sc2mnrf0802.universe.wf
@@ -65,8 +68,8 @@ A succeful request will always respond with those 5 fields
 + _String_ __`commentaire`__: A comment I writed, often empty.
 + _String_ __`path`__: The path of the file on the server (just the basename of the music).
 
-### Particularities:
-+ __get-req.php__: You can set a boolean parameter `title` to _true_ to get an intro. 
+### Particular URIs:
++ __get-html.php__: You can set a boolean parameter `title` to _true_ to get an intro. 
 You can get a response:
 ```
 <div class="music-head">
@@ -74,12 +77,62 @@ You can get a response:
 </div>
 <audio src="http://musiques.nils.test.sc2mnrf0802.universe.wf/api/An Oasis In Time.mp3" type="audio/mp3" controls="" autoplay=""></audio>
 ```
-<div class="music-head">
-    <p><span class="music-title">An oasis in time </span> (<span class="music-artists">Michiru Yamane</span>; <span class="music-track"> 39 </span>; in <span class="music-album">Skullgirls</span>)</p>
-</div>
-<audio src="http://musiques.nils.test.sc2mnrf0802.universe.wf/api/An Oasis In Time.mp3" type="audio/mp3" controls="" autoplay=""></audio>
 
 The `p` element has the class `music-head`, the title `music-title`, the artists `music-artists`, ...
+
+
++ __get-json__: You can inculde the `indent=`_`n`_ parameter to get the request with _`n`_ indent, the returned indent is in the header `Body-Indent`.
+
++ __list.php__: This endpoint will send back a list of responses so you will get somthing like this:
+```
+[
+    {
+        "title":  "Resurrections",
+        "composers": [
+            "Lena Raine"
+        ],
+        "track": 3,
+        "album": "Celeste",
+        "commentaire": "",
+        "path": "03 - Resurrections.mp3"
+    },
+    {
+        "title":  "Awake",
+        "composers": [
+            "Lena Raine"
+        ],
+        "track": 4,
+        "album": "Celeste",
+        "commentaire": "",
+        "path": "04-Awake.mp3"
+    }
+]
+```
+or
+```
+<musics>
+    <music>
+        <title>Resurrections</title>
+        <composers>
+            <composer>Lena Raine</composer>
+        </composers>
+        <track>3</track>
+        <album>Celeste</album>
+        <commentaire></commentaire>
+        <path>03 - Resurrections.mp3</path>
+    </music>
+    <music>
+        <title>Awake</title>
+        <composers>
+            <composer>Lena Raine</composer>
+        </composers>
+        <track>4</track>
+        <album>Celeste</album>
+        <commentaire></commentaire>
+        <path>04-Awake.mp3</path>
+    </music>
+</music>
+```
 
 ## Handled Headers
 
@@ -111,7 +164,7 @@ ex:
     "code": 404,
     "name": "Not found",
     "message": "The specified element does not exist."
-    "stack-trace": "#0 /home/sc2mnrf0802/api.musique.nils.test/get-req.php(34): checkParam() #1 {main}",
+    "stack-trace": "#0 /home/sc2mnrf0802/api.musique.nils.test/get-json.php(34): checkParam() #1 {main}",
     "other_info": "Path: http://musiques.nils.test.sc2mnrf0802.universe.wf/api/example.mp3"  
 }
 ```
@@ -130,6 +183,7 @@ I am working on a list endpoint that could list the musics availble but for now 
 - Ancient Ruins Night
 - Ancient Ruins Relaxed
 - Ancient Ruins Theme
+- Bayonetta - Fly Me To The Moon (Climax)
 - Climatic Battle
 - Crypt (Combat)
 - Desert Firestorm
@@ -152,4 +206,5 @@ I am working on a list endpoint that could list the musics availble but for now 
 - ST08 パラディソ - 時の記憶の墓場
 - The Gates Of Hell
 - Unfinished Business
+- The Painter
 - 友よ

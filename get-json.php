@@ -28,26 +28,32 @@
                 throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422);
         }
 
-        $parsed_Accept = parseAcceptHeader(); 
+        $parsed_Accept = parseAcceptHeader();
+        $indent = array_key_exists('indent', $req)? $req['indent'] : 0; 
+        if(!is_numeric(rtrim($indent))){throw new ServerError("The 'indent' is not a number", 400, "indent: $indent");}
+
+        $indent = (int) rtrim($indent);    //convert to int
 
         checkAccept($req);  //redirects so should be before
         checkParamFile($req);
 
         $music = Music::getFromFile($req["file"]);
 
-        if(isMaxWeightAndAvailble('application/xml')){
-            
-            header('Content-Type: application/json; charset=utf-8', true, 200);
-            if(!$head_method)          
-                echo $music->jsonEncode();  //send ressource
-            return $music->jsonEncode();
+        header("Body-Indent: $indent");
+        if(isMaxWeightAndAvailable('application/xml')){
+            header('Content-Type: application/xml; charset=utf-8', true, 200);
+            if(!$head_method){echo $music->XMLEncode($indent);}
+            return $music->XMLEncode($indent);
         }
 
-        header('Content-Type: application/xml; charset=utf-8', true, 200);
-        if(!$head_method){echo $music->XMLEncode();}
-        return $music->XMLEncode();
+        
+        header('Content-Type: application/json; charset=utf-8', true, 200);
+        if(!$head_method)          
+            echo $music->jsonEncode($indent);  //send ressource
+        return $music->jsonEncode($indent);        
     }catch(ServerError $err){
         header('Content-Language: en');
+        header("Body-Indent: 0");
         header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
         
         if(!$head_method){echo $err->toJson();}
@@ -55,6 +61,7 @@
         
     }catch(Throwable $err){
         header('Content-Language: en');
+        header("Body-Indent: 0");
         header('Content-Type: application/json; charset=utf-8', true, 500);
         
         $e = ServerError::constructFromThrowable($err, 'Unexpected error');

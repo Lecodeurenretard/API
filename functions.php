@@ -1,7 +1,7 @@
 <?php
 include_once("class.php");
-if(empty(HEADERS)){define('HEADERS', getallHEADERS());}
-if(empty(PAGE)){define('PAGE', basename(__FILE__, '.php'));}
+if(!defined('HEADERS')){define('HEADERS', getallheaders());}
+if(!defined('PAGE')){define('PAGE', basename(__FILE__, '.php'));}
 
 /**
  * Transforme $arr en string de la forme '$autour$arr[0]$autour$sep$autour$arr[1]$autour...'; par exemple echo arrayToString(["moi", "toi"], ' + ', '"'); //"moi" + "toi"
@@ -9,20 +9,23 @@ if(empty(PAGE)){define('PAGE', basename(__FILE__, '.php'));}
  * @param string $sep =', ' | le séparateur
  * @param string|array $autour ='' | ce qui entoure chaque élément; si array, v.ex: arrayToString(["jojo", "lui"], ' ', ['<', '>]) = "<jojo> <lui>"; si array et le nb d'élément est 1, fait comme si ce n'était pas un tableau
  * @param bool $keys =false | Si l'on doit afficher les clefs
+ * @param int $baseIndent =0| L'indentation de base, n'est valable que si $sep contient un retour à la ligne (PHP_EOL)
  * @return string tous les éléments de $arr avec entre eux $sep
  */
-function arrayToString(array $arr, string $sep=', ', string|array $autour='', $keys = false) : string{
+function arrayToString(array $arr, string $sep=', ', string|array $autour='', $keys = false, int $baseIndent = 0) : string{
+    $indent = (str_contains($sep, PHP_EOL))? str_repeat("\t", $baseIndent) : '';
+    
     if(gettype($autour)=='array' && count($autour)>=2){
         $ret = '';
         foreach($arr as $i => $elem){
-            $ret .= $autour[0] . ($keys? $i . $autour[1] . ': ' . $autour[0] : '') . $elem . $autour[1] . $sep;
+            $ret .= $indent . $autour[0] . ($keys? $i . $autour[1] . ': ' . $autour[0] : '') . $elem . $autour[1] . $sep;
         }
         return rtrim($ret, $sep);   //enlève le dernier séparateur
     }elseif(gettype($autour)=='array' && count($autour)<2){$autour = $autour[0];}
     
     $ret = '';
     foreach($arr as $i => $elem){
-        $ret .= $autour . ($keys? $i . $autour . ': ' . $autour : '') . $elem . $autour . $sep;
+        $ret .= $indent . $autour . ($keys? $i . $autour . ': ' . $autour : '') . $elem . $autour . $sep;
     }
     return rtrim($ret, $sep);   //enlève le dernier séparateur
 }
@@ -163,16 +166,16 @@ function verifyAcceptsType(string $type, string $sous_type) : bool{
  * @param string $MIME_type Le type et le sous-type MIME à évaluer
  * @return bool Si le type complet MIME est disponible et est le plus haut dans le poid
  */
-function isMaxWeightAndAvailble(string $MIME_Type) : bool{
+function isMaxWeightAndAvailable(string $MIME_Type) : bool{
     $comma_exploded = explode(',', HEADERS['Accept']);
     $this_weight = getWeightOfAccept($MIME_Type);
 
-    $type_availble = ['*/*', 'text/html', 'text/*', 'application/json', 'application/*', 'audio/mp3', 'audio/*'];
+    $type_availble = ['*/*', 'text/html', 'text/*', 'application/json', 'application/xml', 'application/*', 'audio/mp3', 'audio/*'];
     if(!in_array($MIME_Type, $type_availble)){return false;}
 
-    if($this_weight == 0){return false;}    //always true
-    foreach($comma_exploded as $type){
-        if($this_weight < getWeightOfAccept(explode(';', $type)[0])  &&  array_search_include($type_availble, $type) == -1){ //if the type watched has a greater priority and is availble
+    if($this_weight == 0){return false;}
+    foreach($comma_exploded as $type){  //bubble sort
+        if($this_weight < getWeightOfAccept(explode(';', $type)[0])  &&  array_search_include($type_availble, $type) == -1){ //if the type watched has a greater priority and is available
             return false;
         }
     }
@@ -200,8 +203,9 @@ function getWeightOfAccept(string $MIME_type) : float{
  * Si $needle est présent dans un des éléments de $haystack
  * @param array $haystack Un array dont les elements seront convertie en string par strval()
  * @param string $needle Ce que l'on doit chercher
+ * @return string|int if don't find $needle returns -1
  */
-function array_search_include(array $haystack, string $needle) : mixed{
+function array_search_include(array $haystack, string $needle) : string|int{
     foreach($haystack as $key => $elem){
         $e = strval($elem);
 
@@ -214,22 +218,27 @@ function array_search_include(array $haystack, string $needle) : mixed{
 
 /**
  * Parse the header Accept from 'text/html; q=0.2, audio/wav' to [{type: 'text/html', q: 0.2}, {type: 'audio/wav', q: 1}]
- * @return array Retourne un array d'objet avec deux propriétées: type pour le type MIME et q pour le poid
+ * @param bool $associative If the function returns an associative array (see return)
+ * @return array Si !associative, retourne un array d'objet avec deux propriétées: type pour le type MIME et q pour le poid
  */
-function parseAcceptHeader() : Array{
+function parseAcceptHeader(bool $associative = false) : Array{
     $nonParsed = HEADERS['Accept'];
     $comma = explode(',', $nonParsed);
     $ret = array();
 
     foreach($comma as $type){
         $cont = str_contains($type, ';')? explode(';', $type) : [$type, '1'];
-        array_push(
-            $ret,
-            (object) [
-                'type' => ltrim($cont[0]),
-                'q'=> (float) ltrim($cont[1], 'q= ')    //the weight
-            ]
-        );
+        if(!$associative){
+            array_push(
+                $ret,
+                (object) [
+                    'type' => ltrim($cont[0]),
+                    'q'=> (float) ltrim($cont[1], 'q= ')    //the weight
+                ]
+            );
+        }else{
+            $ret[ltrim($cont[0])] = (float) ltrim($cont[1], 'q= ');
+        }
     }
     return $ret;
 }
@@ -238,7 +247,9 @@ function parseAcceptHeader() : Array{
  * Verify the Accept header and redirects if needed
  * @param array $req The request in an associative array
  */
-function checkAccept(array $req){
+function checkAccept(array $req, bool $redirect=true){
+    if(!array_key_exists('file', $req) || empty($req['file'])){$req["file"] = '';}
+
     if(array_key_exists('Accept-Language', HEADERS) && !str_contains(HEADERS['Accept-Language'], '*') && !str_contains(HEADERS['Accept-Language'], 'en')){
         throw new ServerError("Cannot provide language other that english");
     }
@@ -247,25 +258,25 @@ function checkAccept(array $req){
         throw new ServerError("Cannot provide another charset that utf-8", 406);
     }
 
-    if(isMaxWeightAndAvailble('*/*')){//the representation by default is the one we first requested
-        redirect('get-' . PAGE . '.php', ['file'], [$req['file']]);
+    if(isMaxWeightAndAvailable('*/*')){//the representation by default is the one we first requested
+        if($redirect){redirect('get-' . PAGE . '.php', ['file'], [$req['file']]);}
         return;
     }
 
-    if(verifyAcceptsType('audio', 'mp3') && (isMaxWeightAndAvailble('audio/mp3') || isMaxWeightAndAvailble('audio/*'))){    //if exepct audio/mp3 redirect to get-music.php, par défaut on envoie application/json
-       redirect('get-music.php', ['file'], [$req['file']]);
+    if(verifyAcceptsType('audio', 'mp3') && (isMaxWeightAndAvailable('audio/mp3') || isMaxWeightAndAvailable('audio/*'))){    //if exepct audio/mp3 redirect to get-music.php, par défaut on envoie application/json
+       if($redirect){redirect('get-music.php', ['file'], [$req['file']]);}
        return;
     }/*in comment because don't work well
     else if(array_key_exists('Accept', HEADERS) && str_contains(HEADERS['Accept'], 'audio/')){
         throw new ServerError("Can only give mp3 audio files", 406);
     }*/
 
-    else if(verifyAcceptsType('text', 'html') && (isMaxWeightAndAvailble('text/html') || isMaxWeightAndAvailble('text/*'))){
-        redirect('get-html.php', ['file'], [$req['file']]);
+    else if(verifyAcceptsType('text', 'html') && (isMaxWeightAndAvailable('text/html') || isMaxWeightAndAvailable('text/*'))){
+        if($redirect){redirect('get-html.php', ['file'], [$req['file']]);}
         return;
     }
     else if(verifyAcceptsType('application', 'json') || verifyAcceptsType('application', 'xml')){
-        redirect('get-json.php', ['file'], [$req['file']]);
+        if($redirect){redirect('get-json.php', ['file'], [$req['file']]);}
         return;
     }
     
@@ -273,8 +284,7 @@ function checkAccept(array $req){
     foreach(parseAcceptHeader() as $i => $head){
         $types[$i] = $head->type;
     }
-    
-    throw new ServerError("Cannot provide this representation, html and mp3 responses are the only other alternatives.", 406, "Tried to get a " . arrayToString($types, ' or a ', "'"));
+    throw new ServerError("Cannot provide this representation: json, html, xml and mp3 responses are the only other alternatives.", 406, "Tried to get a " . arrayToString($types, ' or a ', "'"));
 }
 
 /**
