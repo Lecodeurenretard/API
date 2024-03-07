@@ -3,19 +3,19 @@
 I made an api to get music from my server. This API is public so feel free to try at [api.musiques.nils.test.sc2mnrf0802.universe.wf](http://api.musiques.nils.test.sc2mnrf0802.universe.wf/?file=An+Oasis+In+Time)    
 
 ## URIs  
-- `get-json.php`: Gives the JSON or XML format of the requested ressource. 
+- __[get-json.php](get-json.php)__: Gives the JSON or XML format of the requested ressource. 
 
    
-- `get-music.php`: Gives the mp3 file of the requested ressource, request other type (like .wav) will send an error.  
+- __[get-music.php](get-music.php)__: Gives the mp3 file of the requested ressource, request other type (like .wav) will send an error.  
 
 
-- `get-html.php`: Gives the HTML format of the requested ressource.    
+- __[get-music.php](get-music.php)__: Gives the HTML format of the requested ressource.    
 
 
-- `list.php`: Gives the list of available musics
+- __[list.php](list.php)__: Gives the list of available musics
 
 
-- `index.php`: Redirects to `get-json.php`; will **lose the headers** so it is not recomended to requests this page instead of `get-req`
+- __[index.php](index.php)__: Redirects to [get-json.php](get-json.php); will **lose the headers** so it is not recomended to requests this page instead of `get-req`
 
 
 ## How to make a request
@@ -168,43 +168,3 @@ ex:
     "other_info": "Path: http://musiques.nils.test.sc2mnrf0802.universe.wf/api/example.mp3"  
 }
 ```
-
-## Musics available
-I am working on a list endpoint that could list the musics availble but for now I have a list.
-- 03 - Resurrection
-- 04 - Awake
-- 07 - Spirit of Hospitality
-- 08 - Pale Court
-- 08 - Scattered and Lost
-- 09 - Gods & Glory
-- A Return To Normalcy
-- An Oasis In Time
-- An Oasis Of Blood
-- Ancient Ruins Night
-- Ancient Ruins Relaxed
-- Ancient Ruins Theme
-- Bayonetta - Fly Me To The Moon (Climax)
-- Climatic Battle
-- Crypt (Combat)
-- Desert Firestorm
-- Dirge of the Divine Trinity
-- Fugue In Three Goddesses
-- Gerudo Colosseum (Combat)
-- Indigo Quarry Night
-- Indigo Quarry Relaxed
-- Indigo Quarry Theme
-- Let's Dance Boys!
-- Mysterious Destiny
-- One Of A Kind
-- Paved With Good Intentions
-- Radio Romantic
-- Red & Black
-- Riders Of The Light
-- ST01 墜落する軍用輸送機
-- ST02 ヴィグリッド 駅ホーム
-- ST03 ヴィグリッド 市街地
-- ST08 パラディソ - 時の記憶の墓場
-- The Gates Of Hell
-- Unfinished Business
-- The Painter
-- 友よ
