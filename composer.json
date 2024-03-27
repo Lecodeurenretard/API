@@ -1,0 +1,19 @@
+{
+    "name": "my_api/music_api",
+    "description": "I made an api in PHP, available on github under Lecodeurenretard/API",
+    "type": "project",
+    "require": {
+        "wapmorgan/mp3info": "^0.1.0",
+        "dotenv-org/phpdotenv-vault": "^0.2.4"
+    },
+    "license": "free",
+    "authors": [
+        {
+            "name": "LeRetardatN"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.9"
+    }
+}

@@ -1,0 +1,8 @@
+changed names (hopefully for the last time):
+	get-json.php -> music-infos.php
+	get-music.php -> mp3.php
+	get-html.php -> html.php
+
+fixed some bugs
+added auth
+changed some other things
