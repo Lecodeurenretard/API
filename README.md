@@ -1,6 +1,6 @@
 # API Documentation
 ## Purpose
-I made an api to get music from my server. This API is public so feel free to try at [api.musiques.nils.test.sc2mnrf0802.universe.wf](http://api.musiques.nils.test.sc2mnrf0802.universe.wf/?file=An+Oasis+In+Time)    
+I made an api to get music from my server. This API is public so feel free to try at [api.musiques.nils.test.sc2mnrf0802.universe.wf](http://api.musiques.nils.test.sc2mnrf0802.universe.wf/?file=An+Oasis+In+Time)  (I also created a shorter url: [bit.ly/API_nils_test](bit.ly/API_nils_test))
 
 ## URIs  
 - __[music-infos *.php*](music-infos.php)__: Gives the JSON or XML format of the requested ressource. 
