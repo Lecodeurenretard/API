@@ -270,6 +270,30 @@ function parseAcceptHeader(bool $associative = false, bool $errorHeader = false)
     return $ret;
 }
 
+
+/** 
+ * Parse a header of the form:    header: val1, val2, val3; subval=ex \n
+ * @param string $header The name of the header (will fetch it with HEADERS)
+ * @param bool $associative If the function returns an associative array (see return)
+ */
+function parseHeader(string $header) : array{
+	$nonParsed = HEADERS[$header];
+	$comma = explode(',', $nonParsed);
+
+    $ret = array();
+	foreach($comma as $head){
+		$boom = explode(';', $head, 2);
+		$boom[1] = array_key_exists(1, $boom)? $boom[1] : null;
+
+		array_push(
+			$ret,
+			$boom
+		);
+	}
+	return $ret;
+}
+
+
 /**
  * Verify the Accept header and redirects if needed
  * @param array $req The request in an associative array
@@ -289,20 +313,20 @@ function checkAccept(array $req, bool $redirect=true) : void{
         return;
     }
 
-    if(verifyAcceptsType('audio', 'mp3') && (isMaxWeightAndAvailable('audio/mp3') || isMaxWeightAndAvailable('audio/*'))){    //if exepct audio/mp3 redirect to get-music.php, par défaut on envoie application/json
-       if($redirect){redirect('mp3', ['file'], [$req['file']]);}
+    if(verifyAndAccept('audio', 'mp3')){    //if exepct audio/mp3 redirect to get-music.php, par défaut on envoie application/json
+       if($redirect && PAGE != PAGE_TAB['mp3']){redirect('mp3', ['file'], [$req['file']]);}
        return;
     }/*in comment because don't work well
     else if(array_key_exists('Accept', HEADERS) && str_contains(HEADERS['Accept'], 'audio/')){
         throw new ServerError("Can only give mp3 audio files", 406);
     }*/
 
-    else if(verifyAcceptsType('text', 'html') && (isMaxWeightAndAvailable('text/html') || isMaxWeightAndAvailable('text/*'))){
-        if($redirect){redirect('html', ['file'], [$req['file']]);}
+    else if(verifyAndAccept('text', 'html')) {
+        if($redirect && PAGE != PAGE_TAB['html']){redirect('html', ['file'], [$req['file']]);}
         return;
     }
-    else if(verifyAcceptsType('application', 'json') || verifyAcceptsType('application', 'xml')){
-        if($redirect){redirect('music-infos', ['file'], [$req['file']]);}
+    else if((verifyAcceptsType('application', 'json') || verifyAcceptsType('application', 'xml'))){
+        if($redirect && PAGE != PAGE_TAB['infos']){redirect('music-infos', ['file'], [$req['file']]);}
         return;
     }
     
@@ -311,6 +335,10 @@ function checkAccept(array $req, bool $redirect=true) : void{
         $types[$i] = $head->type;
     }
     throw new ServerError('Cannot provide this representation: json, html, xml and mp3 responses are the only other alternatives.', 406, 'Tried to get a ' . arrayToString($types, ' or a ', "'"));
+}
+
+function verifyAndAccept(string $type, string $sous_type) : string{
+	return verifyAcceptsType($type, $sous_type) && (isMaxWeightAndAvailable("$type/$sous_type") || isMaxWeightAndAvailable("$type/*"));
 }
 
 /**
@@ -417,7 +445,7 @@ function readBoolString(string $str): ?bool{
     return null;
 }
 
-function xmlentities(string $str, $flags = ENT_QUOTES | ENT_XHTML) : string{
+function xmlentities(string $str, $flags = ENT_QUOTES | ENT_XML1) : string{
     return htmlentities($str, $flags, 'UTF-8');
 }
 

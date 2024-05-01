@@ -4,6 +4,8 @@ use wapmorgan\Mp3Info\Mp3Info;
 
 DotenvVault\DotenvVault::createImmutable(__DIR__)->safeload();  //init dotev
 
+define('FORBIDDEN_CHARS', FORBIDDEN_CHARS);
+
 include_once("functions.php");
 /**
  * Représente un fichier musique .mp3
@@ -36,11 +38,11 @@ class Music {
     private string $fullPath = self::STORAGE_URL;
     public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $album="", string $path){        if(empty($path) && $path !==''){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
     if(empty($path) && $path !==''){throw new ServerError("Cannot set a Music object  with empty path", 500);}
-        $this->title = (isset($title))? $title : '';
-        $this->composers = (isset($composers))? $composers : [];
-        $this->track = (isset($track))? $track: -1;
-        $this->commentaire = isset($commentaire)? $commentaire : '';
-        $this->album = isset($album)? $album : '';
+        $this->title =          isset($title)?          str_replace(FORBIDDEN_CHARS, '', $title)          : '';//remove null bytes
+        $this->composers =      isset($composers)?      str_replace(FORBIDDEN_CHARS, '', $composers)      : [];
+        $this->track =          isset($track)?          str_replace(FORBIDDEN_CHARS, '', $track)          : -1;
+        $this->commentaire =    isset($commentaire)?    str_replace(FORBIDDEN_CHARS, '', $commentaire)    : '';
+        $this->album =          isset($album)?          str_replace(FORBIDDEN_CHARS, '', $album)          : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
 
@@ -179,11 +181,11 @@ class Music {
      * Set les fields de $this suivant les arguments
      */
     private function set(?string $title, ?array $composers, ?int $track, ?string $album, ?string $commentaire="", string $path){
-        $this->title        =    isset($title)      ? $title       : '';
-        $this->composers    =    isset($composers)  ? $composers   : [];
-        $this->track        =    isset($track)      ? $track       : -1;
-        $this->album        =    isset($album)      ? $album       : '';
-        $this->commentaire  =    isset($commentaire)? $commentaire : '';
+        $this->title        =    isset($title)      ? str_replace(FORBIDDEN_CHARS, '', $title)       : '';
+        $this->composers    =    isset($composers)  ? str_replace(FORBIDDEN_CHARS, '', $composers)   : [];
+        $this->track        =    isset($track)      ? str_replace(FORBIDDEN_CHARS, '', $track)       : -1;
+        $this->album        =    isset($album)      ? str_replace(FORBIDDEN_CHARS, '', $album)       : '';
+        $this->commentaire  =    isset($commentaire)? str_replace(FORBIDDEN_CHARS, '', $commentaire) : '';
         $this->path = $path;
         $this->fullPath = Music::STORAGE_URL.$path;
     }
@@ -291,9 +293,9 @@ class ServerError extends ErrorException{
      */
     public function toJson() : string{
         $noAuth = '';
-        $getStack;
+        $getStack='';
         try{$getStack = (checkAuthorization()=='admin' || checkAuthorization()=='tester');}                     //check if request has correct auth
-        catch(ServerError $e){$e->sendHeaders(); $noAuth = '   |   '. $e->getMessage();}
+        catch(ServerError $e){$e->sendErrorHeaders(); $noAuth = '   |   '. $e->getMessage();}
         $stack =  str_replace( PHP_EOL, '', $this->getTraceAsString()) . '",'. PHP_EOL ;  //remove the new line
         $stack_line = $getStack? '   "stack-trace": "'. $stack . PHP_EOL  : '';         //the line containing the stack depending on the auth
  
@@ -314,7 +316,7 @@ class ServerError extends ErrorException{
     public function toXML(bool $raw = true) : string{
         $noAuth = '';
         try{$getStack = (checkAuthorization()=='admin' || checkAuthorization()=='tester');}                     //check if request has correct auth
-        catch(ServerError $e){$e->sendHeaders(); $noAuth = '   |   '. $e->getMessage();}
+        catch(ServerError $e){$e->sendErrorHeaders(); $noAuth = '   |   '. $e->getMessage();}
         $stack_line = $getStack? "\t<stack-trace>{$this->getTraceAsString()}</stack-trace>" . PHP_EOL  : '';    //the line containing the stack depending on the auth
 
         $this_tab = [

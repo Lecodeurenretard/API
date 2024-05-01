@@ -1,8 +1,6 @@
-changed names (hopefully for the last time):
-	get-json.php -> music-infos.php
-	get-music.php -> mp3.php
-	get-html.php -> html.php
+Fixed "control characters glitch" (chars like null (0x00), enq (0x05) or soh (0x01) would be in strings and were messing up the output).
+fixed some minor bugs.
 
-fixed some bugs
-added auth
-changed some other things
+functions.php:
+	added verifyAndAccept(), a shorthand for a combinaison of verifyAcceptsType()s
+	added parseHeader() (not used yet)

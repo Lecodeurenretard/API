@@ -31,7 +31,7 @@
 
         $parsed_Accept = parseAcceptHeader();
         $indent = array_key_exists('indent', $req)? $req['indent'] : 0; 
-        if(!is_numeric(rtrim($indent))){throw new ServerError("The 'indent' is not a number", 400, "indent: $indent");}
+        if(!is_numeric(trim($indent))){throw new ServerError("The 'indent' is not a number", 400, "indent: $indent");}
 
         $indent = (int) rtrim($indent);    //convert to int
         if($indent < 0){$indent=0;}
