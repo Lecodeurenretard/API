@@ -31,15 +31,18 @@
                 throw new ServerError("The method \"$method\" is not allowed or unknown, please try again with one specified in the header Allow.", 405);
         }
 
-        checkAccept($req);
+        checkAccept(
+            $req,
+            (array_key_exists('redirect', $req) && isset($req['redirect']))? strToBool($req['redirect']) : true,    //check if the redirect param is true
+        );
         checkParamFile($req);
 
         $music = Music::getFromFile($req['file']);
         $return = '';
-        if(array_key_exists('title', $req) && readBoolString($req['title'] == null)){throw new ServerError("Parameter title incorrect, it must be equal to 'true' or 'false'", 400);}
+        if(array_key_exists('title', $req) && strToBool($req['title'] == null)){throw new ServerError("Parameter title incorrect, it must be equal to 'true' or 'false'", 400);}
         if(
             array_key_exists('title', $req) 
-            && readBoolString($req['title'])        
+            && strToBool($req['title'])        
         ){
             $return = "<div class='music-head'>" . Music::getFromFile($req['file'])->toHTML() . '</div>';
         }
@@ -62,10 +65,22 @@
     }catch(Throwable $err){
         header('Content-Type: application/json; charset=utf-8', true, 500);
 
-        $e = ServerError::constructFromThrowable($err, 'Unexpected error');
-        $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
-
-        if(!$head_method){echo $ret;}
+        try {
+            $e = ServerError::constructFromThrowable($err, 'Caught unexpected error');
+            $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
+        }catch(Throwable $th){
+            //unable to access ServerError
+            $ret = 
+                '{'                                             . PHP_EOL .
+                "\t". '"code": 500'                             . PHP_EOL .
+                "\t". '"name": "Unknown error"'                 . PHP_EOL .
+                "\t". '"message": ' . "{$th->getMessage()}"     . PHP_EOL .
+                "\t". '"other-info": ""'                        . PHP_EOL .
+                '}';
+        }
+        
+        if(empty($head_method) || !$head_method){echo $ret;}
+        
         return $ret;
     }
 ?>

@@ -36,7 +36,10 @@
         $indent = (int) rtrim($indent);    //convert to int
         if($indent < 0){$indent=0;}
 
-        checkAccept($req);  //redirects so should be before
+        checkAccept(
+            $req,
+            (array_key_exists('redirect', $req) && isset($req['redirect']))? strToBool($req['redirect']) : true,    //check if the redirect param is true
+        );  
         checkParamFile($req);
 
         $music = Music::getFromFile($req["file"]);
@@ -47,10 +50,15 @@
             if(!$head_method){echo $music->jsonEncode($indent);}//send ressource
             return $music->jsonEncode($indent); 
         }
+        
 
         header('Content-Type: application/xml; charset=utf-8', true, 200);
-        if(!$head_method){echo $music->XMLEncode($indent);}
-        return $music->XMLEncode($indent);
+        $style = XML_Style(true, $req);
+        if(!$head_method){
+            echo $style? "<?xml-stylesheet href='xml-style.css' rel='stylesheet'?>" . PHP_EOL: '';
+            echo $music->XMLEncode($indent, $style);
+        }
+        return $music->XMLEncode($indent, $style);
     }catch(ServerError $err){
         header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
         $err->sendErrorHeaders();
@@ -63,10 +71,22 @@
     }catch(Throwable $err){
         header('Content-Type: application/json; charset=utf-8', true, 500);
 
-        $e = ServerError::constructFromThrowable($err, 'Caught unexpected error');
-        $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
-
-        if(!$head_method){echo $ret;}
+        try {
+            $e = ServerError::constructFromThrowable($err, 'Caught unexpected error');
+            $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
+        }catch(Throwable $th){
+            //unable to access ServerError
+            $ret = 
+                '{'                                             . PHP_EOL .
+                "\t". '"code": 500'                             . PHP_EOL .
+                "\t". '"name": "Unknown error"'                 . PHP_EOL .
+                "\t". '"message": ' . "{$th->getMessage()}"     . PHP_EOL .
+                "\t". '"other-info": ""'                        . PHP_EOL .
+                '}';
+        }
+        
+        if(empty($head_method) || !$head_method){echo $ret;}
+        
         return $ret;
     }
 ?>

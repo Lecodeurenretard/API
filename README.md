@@ -2,7 +2,7 @@
 ## Purpose
 I made an api to get music from my server. This API is public so feel free to try at [api.musiques.nils.test.sc2mnrf0802.universe.wf](http://api.musiques.nils.test.sc2mnrf0802.universe.wf/?file=An+Oasis+In+Time)  (I also created a shorter url: [bit.ly/API_nils_test](bit.ly/API_nils_test))
 
-## URIs  
+## URI list
 - __[music-infos *.php*](music-infos.php)__: Gives the JSON or XML format of the requested ressource. 
 
    
@@ -15,7 +15,7 @@ I made an api to get music from my server. This API is public so feel free to tr
 - __[list *.php*](list.php)__: Gives the list of available musics
 
 
-- __[index *.php*](index.php)__: Redirects to [music-infos](music-infos.php); will **lose the headers** so it is not recomended to requests this page instead of `get-req`
+- __[index *.php*](index.php)__: Redirects to [music-infos](music-infos.php).
 
 
 ## How to make a request
@@ -67,6 +67,9 @@ A succeful request will always respond with those 5 fields
 + _Unsigned Int_ __`track`__: The number of the track.
 + _String_ __`commentaire`__: A comment I writed, often empty.
 + _String_ __`path`__: The path of the file on the server (just the basename of the music).
+
+### Request with browser
+With the new style compatibility, you can now request in browser. Make sure to have the _redirect_ param disabeled in order to not get redirected to the __[html](html.php)__ page. 
 
 ### Particular URIs:
 + __[html](html.php)__: You can set a boolean parameter `title` to _true_ to get an intro. 
@@ -135,20 +138,32 @@ or
 </music>
 ```
 
+### Particular parameters in URL
++ _(bool)_ `redirect`: Define if redirections should be done works for [music-infos](music-infos.php), [mp3](mp3.php) and [html](html.php) endpoints.
++ _(bool)_ `styled`: Equivalent to the `Body-Style` header, controls whether or not the response should have a predefined stylesheet attached. Works for [music-infos](music-infos.php) and [list](list.php).
+
+#### Write a boolean parameter
+There's 4 accepted values:
++ `true` <=> `1`
++ `false` <=> `0`
+
 ## Handled Headers
 
 - `Accept`: The MIME types expected separated by a comma(`,`), possibility to give the weight argument (`q`). ex: `Accept: application/json, */*; q=0.7`. 
     ### Accepted types: 
-    + application/json (default),
+    + **application/json** (default),
     + application/xml,
     + audio/mp3,
     + text/html
 - `Accept-Charset`: The accepted charset. Can only provide __utf-8__.
 - `Accept-Language`: The accepted language. Can only provide __english__.
+- `Accept-Error`: The type to send back if an error occurs, takes only:
+    + **application/json** (default),
+    + application/xml
 
 ## Handled methods
 For now, any other method that __`GET`__, __`POST`__ or __`HEAD`__ will send back an error message.  
-A `GET` request is equivalent to a `POST` request, the server will send the headers of the music. A `HEAD` request will send back only the headers.
+A `GET` request is equivalent to a `POST` request (parsed as an HTML form), the server will send the headers of the music. A `HEAD` request will send back only the headers.
 
 ## Handling errors
 The server will __always__ send the error message in JSON.  

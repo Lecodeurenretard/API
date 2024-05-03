@@ -4,7 +4,7 @@ use wapmorgan\Mp3Info\Mp3Info;
 
 DotenvVault\DotenvVault::createImmutable(__DIR__)->safeload();  //init dotev
 
-define('FORBIDDEN_CHARS', FORBIDDEN_CHARS);
+define('FORBIDDEN_CHARS', ["\t", "\r", "\n", "\x00", "\x01", "\x02", "\x03", "\x04", "\x04", "\x05", "\x1b"]);
 
 include_once("functions.php");
 /**
@@ -135,9 +135,9 @@ class Music {
     /**
      * Convertit l'objet courant en XML
      */
-    public function XMLEncode(int $baseIndent=0) : string{
+    public function XMLEncode(int $baseIndent=0, bool $linkStyle = false) : string{
         $indent = str_repeat("\t", $baseIndent);
-        $composers = $this->composers;  //I don't changes to be made in the object's field 
+        $composers = $this->composers;  //I don't modify the object's field 
         array_walk($composers, 'xmlentities_callback');
         
         $this_arr = [
@@ -149,15 +149,15 @@ class Music {
         ];
 
         return  //on fait en sorte qu'un humain puisse lire la sortie
-            $indent . "<music>"                                                                                                 . PHP_EOL .
-            $indent . "\t<title>". $this_arr[0] ."</title>"                                                                      . PHP_EOL . 
-            $indent . "\t<composers>"                                                                                           . PHP_EOL .
-            $indent . "\t" .  $this_arr[1] . PHP_EOL .
-            $indent . "\t</composers>"                                                                                          . PHP_EOL .
-            $indent . "\t<track>". $this->track."</track>"                                                                      . PHP_EOL . 
-            $indent . "\t<album>". $this_arr[2]."</album>"                                                                      . PHP_EOL . 
-            $indent . "\t<commentaire>". $this_arr[3] ."</commentaire>"                                                    . PHP_EOL .
-            $indent . "\t<path>" . $this_arr[4] ."</path>"                                                                       . PHP_EOL .
+            $indent . "<music>"                                                . PHP_EOL . 
+            $indent . "\t<title>". $this_arr[0] ."</title>"                    . PHP_EOL . 
+            $indent . "\t<composers>"                                          . PHP_EOL .
+            $indent . "\t" .  $this_arr[1]                                     . PHP_EOL .
+            $indent . "\t</composers>"                                         . PHP_EOL .
+            $indent . "\t<track>". $this->track."</track>"                     . PHP_EOL . 
+            $indent . "\t<album>". $this_arr[2]."</album>"                     . PHP_EOL . 
+            $indent . "\t<commentaire>". $this_arr[3] ."</commentaire>"        . PHP_EOL .
+            $indent . "\t<path>" . $this_arr[4] ."</path>"                     . PHP_EOL .
             $indent . "</music>";
 
     }

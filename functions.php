@@ -277,6 +277,7 @@ function parseAcceptHeader(bool $associative = false, bool $errorHeader = false)
  * @param bool $associative If the function returns an associative array (see return)
  */
 function parseHeader(string $header) : array{
+    if(!array_key_exists($header, HEADERS)){ throw new ServerError("Header '$header' is not set!", 500); }
 	$nonParsed = HEADERS[$header];
 	$comma = explode(',', $nonParsed);
 
@@ -438,7 +439,7 @@ function checkIfParamBool(array $request, string|array $params) : bool{
  * Convert $str in PHP bool
  * @return ?bool returns null if can't read it
  */
-function readBoolString(string $str): ?bool{
+function strToBool(string $str): ?bool{
     if($str == '1' || $str == 'true'){return true;}
     if($str == '0' || $str == 'false'){return false;}
     
@@ -454,4 +455,35 @@ function xmlentities(string $str, $flags = ENT_QUOTES | ENT_XML1) : string{
  */
 function xmlentities_callback(string &$str) : void{
     $str = xmlentities($str);
+}
+
+/**
+ * Check Body-Style header and styled param
+ * @param bool $noThrow If true, don't throw any error, if an error occurs return false
+ */
+function XML_Style(bool $noThrow = false, array $req=null) : bool{
+    if(isset($req) && array_key_exists('styled', $req)){
+        $style = strToBool($req['styled']);
+        if(empty($style) && $style !== false && !$noThrow){
+            throw new ServerError("Wrong param in the parameter 'styled'", 400, "header value: `{$req['styled']}`");
+        }elseif(empty($style) && $style !== false){
+            return false;
+        }
+
+        return $style; 
+    }
+
+    try {
+        $Body_style = parseHeader('Body-Style')[0][0];
+    } catch (ServerError $e) {
+        if($e->getMessage() != "Header 'Body-Style' is not set!" && !$noThrow) { throw $e; } //in case of an unexpected err
+        return false;
+    }
+    $style = strToBool($Body_style);
+    if(empty($style) && $style !== false && !$noThrow){
+        throw new ServerError("Wrong param in the header 'Body-Style'", 400, "header value: `$Body_style`");
+    }elseif(empty($style) && $style !== false){
+        return false;
+    }
+    return $style;
 }

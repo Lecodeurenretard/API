@@ -44,11 +44,13 @@
         }elseif(verifyAcceptsType('application', 'xml')){
             header('Content-Type: application/xml; charset=utf-8', true, 200);
 
-            $ret = '<musics>' . PHP_EOL; 
+            $ret = (XML_Style(true, $req)? "\t<?xml-stylesheet href='xml-style.css' rel='stylesheet'?>" . PHP_EOL : '')
+            . '<musics>' . PHP_EOL ; 
                 foreach(glob(MUSIC::STORAGE_PATH . '/*.mp3') as $file){
-                    $request = curl_init("http://api.musiques.nils.test.sc2mnrf0802.universe.wf/music-infos?indent=2&file=" . urlencode(basename($file, '.mp3')));
+                    $request = curl_init("http://api.musiques.nils.test.sc2mnrf0802.universe.wf/music-infos?indent=1&file=" . urlencode(basename($file, '.mp3')));
                     curl_setopt($request, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($request, CURLOPT_HTTPHEADER, ['Accept: application/xml']);
+                    curl_setopt($request, CURLOPT_HTTPHEADER, ['Accept: application/xml', 'Accept-Error: application/json']);
+
                     $res = curl_exec($request);
                     $ret .= $res . PHP_EOL;    //the result of the request
 
@@ -71,10 +73,24 @@
     }catch(Throwable $err){
         header('Content-Language: en');
         header('Content-Type: application/json; charset=utf-8', true, 500);
+
+        try {
+            $e = ServerError::constructFromThrowable($err, 'Caught unexpected error');
+            $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
+        }catch(Throwable $th){
+            //unable to access ServerError
+            $ret = 
+                '{'                                             . PHP_EOL .
+                "\t". '"code": 500'                             . PHP_EOL .
+                "\t". '"name": "Unknown error"'                 . PHP_EOL .
+                "\t". '"message": ' . "{$th->getMessage()}"     . PHP_EOL .
+                "\t". '"other-info": ""'                        . PHP_EOL .
+                '}';
+        }
         
-        $e = ServerError::constructFromThrowable($err, 'Unexpected error');
-        if(!$head_method){echo $e->toJson();}
-        return $e->toJson();
+        if(empty($head_method) || !$head_method){echo $ret;}
+        
+        return $ret;
     }
 
     
