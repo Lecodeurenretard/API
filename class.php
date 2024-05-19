@@ -36,8 +36,8 @@ class Music {
     private string $path;
 
     private string $fullPath = self::STORAGE_URL;
-    public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $album="", string $path){        if(empty($path) && $path !==''){throw new ServerError("Cannot set object with empty path", 500,'Line: '. __LINE__ . ' of file: ' . __FILE__);}
-    if(empty($path) && $path !==''){throw new ServerError("Cannot set a Music object  with empty path", 500);}
+    public function __construct(string $title='', array $composers=[], int $track=-1, string $commentaire="", string $album="", string $path){
+    if(empty($path) && $path !==''){throw new ServerError("Cannot set a Music object with an empty path", 500, __LINE__);}
         $this->title =          isset($title)?          str_replace(FORBIDDEN_CHARS, '', $title)          : '';//remove null bytes
         $this->composers =      isset($composers)?      str_replace(FORBIDDEN_CHARS, '', $composers)      : [];
         $this->track =          isset($track)?          str_replace(FORBIDDEN_CHARS, '', $track)          : -1;
@@ -115,7 +115,7 @@ class Music {
             || empty($obj->commentaire) 
             || empty($obj->path)
             ){
-                throw new ServerError("The object given to decode is not a Music object at line " . __LINE__ . " from: " . __FILE__, 500, "json given: " . $json);
+                throw new ServerError("The object given to decode is not a Music object", 500, __LINE__, "json given: " . $json);
             }
         
         return new Music($obj->title, explode('/', $obj->composers), $obj->track, $obj->commentaire, $obj->album, $obj->path);
@@ -209,21 +209,11 @@ class Music {
     }
 
     /**
-     * Cherche la musique et set l'objet courant.
+     * Set l'objet courant à la musique de $path.
      * @param string $path Le chemin (à partir de /api/) du fichier, ex: ex.mp3 pour  /home/sc2mnrf0802/nils.test.musiques.wf/api/ex.mp3
      */
     public function setFromFile(string $path) : self{
-        $music = new Mp3Info(Music::STORAGE_PATH . $path, true);
-        
-        $song = ret_array_key_if_defined($music->tags, 'song', '');
-        $artist = explode('/', ret_array_key_if_defined($music->tags, 'artist', ''));        
-        $track = ret_array_key_if_defined($music->tags, 'track', -1);        
-        $album = ret_array_key_if_defined($music->tags, 'album','');
-        $comment = ret_array_key_if_defined($music->tags, 'comment','');
-        
-        if(!str_ends_with($path, '.mp3')){throw new ServerError("File $path is not mp3 audio!");}
-
-        $this->set($song, $artist, $track, $album, $comment, $path);
+        $this->setTo(self::getFromFile($path));
         return $this;
     }
 
@@ -232,13 +222,26 @@ class Music {
      * @param string $path Le chemin (à partir de /api/) du fichier 
      */
     public static function getFromFile(string $path) : Music{
-        return self::getDefault()->setFromFile($path);
+         $music = new Mp3Info(Music::STORAGE_PATH . $path, true);
+        
+        $song = ret_array_key_if_defined($music->tags, 'song', '');
+        $artists = explode('/', ret_array_key_if_defined($music->tags, 'artist', ''));        
+        $track = ret_array_key_if_defined($music->tags, 'track', -1);        
+        $album = ret_array_key_if_defined($music->tags, 'album','');
+        $comment = ret_array_key_if_defined($music->tags, 'comment','');
+        
+        if(!str_ends_with($path, '.mp3')){throw new ServerError("File $path is not mp3 audio!", 400, __LINE__);}
+        return new Music($song, $artists, $track, $comment, $album, $path);
     }
 }
 /** @var Music Représente l'objet par défaut */
 const MusicdefaultObject = new Music('', [], -1, '', '', '');
 
+/** An error */
 class ServerError extends ErrorException{
+    /**
+     * the list of HTTP status and their names
+     */
     const code_list = [
         0 => "Unknown Error",
         400 => "Bad request",
@@ -259,53 +262,67 @@ class ServerError extends ErrorException{
     public string $name = self::code_list[0];
     private string $misc; 
     public ?array $head;
-    public function __construct(string $message, int $code=0, string $misc='', ?array $headers = null){
+    public function __construct(string $message, int $code=0, int $line=-1, string $misc='', ?array $headers = null){
         $this->message = $message;
         if(!array_key_exists($code, self::code_list)){$code = 0;}
         $this->code = $code;
         $this->name = self::code_list[$code];
+        $this->line = $line;
         $this->misc = $misc;
         $this->head = $headers;
     }
 
+
+    /**
+     * Constructs a ServerError object from any Throwable
+     * @param Throwable $obj The base to construct the object
+     * @param string $misc the ServerError->misc property
+     */
     public static function constructFromThrowable(Throwable $obj, string $misc='') : self{
-        $e = new ServerError($obj->getMessage(), 0, $misc);
+        $e = new ServerError($obj->getMessage(), 0, $obj->getLine(), $misc);
         $e->name = get_class($obj);
         return $e;
     }
 
     public function __toString() : string{
-        return "Error " . $this->code . ': '. $this->message . "  //($this->misc)";
+        return "Error number {$this->code}: {$this->message} at {$this->getLine()} //({$this->misc})";
     }
 
     public function __debugInfo() : array{
         $arr = [
-            'type' => $this->code . ': ' . $this->name,
-            'message' => $this->message,
+            'type'               => $this->code . ': ' . $this->name,
+            'message'            => $this->message,
             'other informations' => $this->misc
         ];
-        if($this->misc == null){unset($arr['other informations']);}
+        if(empty($this->misc)){unset($arr['other informations']);}
         return $arr;
     }
 
     /**
-     * returns the error in JSON
+     * returns the error in JSON format
      */
     public function toJson() : string{
-        $noAuth = '';
-        $getStack='';
-        try{$getStack = (checkAuthorization()=='admin' || checkAuthorization()=='tester');}                     //check if request has correct auth
-        catch(ServerError $e){$e->sendErrorHeaders(); $noAuth = '   |   '. $e->getMessage();}
+        $noAuth   = false;
+        $isCorrectAuth = false;
+        try{
+            $isCorrectAuth = (checkAuthorization()=='admin' || checkAuthorization()=='tester');      //check if request has correct auth
+        }catch(ServerError $e){
+            $e->sendErrorHeaders();
+			$noAuth = '   |   '. $e->getMessage();
+        }
+        
         $stack =  str_replace( PHP_EOL, '', $this->getTraceAsString()) . '",'. PHP_EOL ;  //remove the new line
-        $stack_line = $getStack? '   "stack-trace": "'. $stack . PHP_EOL  : '';         //the line containing the stack depending on the auth
+        $stack_line = $isCorrectAuth? "\t" . '"stack-trace": "'. $stack 	. PHP_EOL  : '';         //the line containing the stack
+		$nb_line 	= $isCorrectAuth? "\t" . '"line": ' . $this->getLine()  . PHP_EOL : '';
  
         return
         '{'                                                                     . PHP_EOL .
         '   "code": ' . $this->code               . ','                         . PHP_EOL .
         '   "name": "' . str_replace('"', "'", $this->name)              . '",' . PHP_EOL .// the " will be replaced by a '
         '   "message": "'. str_replace('"', "'", $this->message)         . '",' . PHP_EOL .
+		$nb_line .
         $stack_line .
-        '   "other_info":"' .  str_replace('"', "'", $this->misc) . $noAuth        . '"'  . PHP_EOL .
+        '   "other_info":"' .  str_replace('"', "\\\"", $this->misc) . $noAuth        . '"'  . PHP_EOL .
         '}'                                              . PHP_EOL ;
     }
 
@@ -315,10 +332,17 @@ class ServerError extends ErrorException{
      */
     public function toXML(bool $raw = true) : string{
         $noAuth = '';
-        try{$getStack = (checkAuthorization()=='admin' || checkAuthorization()=='tester');}                     //check if request has correct auth
-        catch(ServerError $e){$e->sendErrorHeaders(); $noAuth = '   |   '. $e->getMessage();}
-        $stack_line = $getStack? "\t<stack-trace>{$this->getTraceAsString()}</stack-trace>" . PHP_EOL  : '';    //the line containing the stack depending on the auth
-
+        $isCorrectAuth = false;
+        try{
+            $isCorrectAuth = (checkAuthorization()=='admin' || checkAuthorization()=='tester');      //check if request has correct auth
+        }catch(ServerError $e){
+            $e->sendErrorHeaders();
+			$noAuth = '   |   '. $e->getMessage();
+        }
+        
+        $stack =  str_replace( PHP_EOL, '', $this->getTraceAsString()) . '",'. PHP_EOL ;  //remove the new line
+        $stack_line = $isCorrectAuth? "\t<stack-trace>$stack</stack-trace>"  . PHP_EOL : '';         //the line containing the stack
+		$nb_line 	= $isCorrectAuth? "\t<line>{$this->getLine()}</line>"  	 . PHP_EOL : '';
         $this_tab = [
             $this->code,
             $raw? $this->name : htmlentities($this->name, ENT_QUOTES | ENT_XHTML, 'UTF-8'),
@@ -330,14 +354,37 @@ class ServerError extends ErrorException{
             "\t<code>{$this_tab[0]}</code>"                . PHP_EOL .
             "\t<name>{$this_tab[1]}</name>"                . PHP_EOL .
             "\t<message>{$this_tab[2]}</message>"          . PHP_EOL .
+			$nb_line    .
             $stack_line .
             "\t<other-info>{$this_tab[3]}</other-info>"    . PHP_EOL .
         '<error>'                                          . PHP_EOL ;
     }
     
+	/**
+	 * Constructs the error from a json string
+	 */
     public static function fromJson(string $json) : ServerError{
-        $obj = json_decode($json, false, 2);
-        return new ServerError($obj->message, $obj->code, $obj->other_info);
+        try{
+            $obj = json_decode($json, false, 2);
+        }catch(Throwable $e){
+            throw new ServerError(
+                'The given object is not a ServerError object',
+                500,
+                __LINE__,
+                'the given json: ' . str_replace(
+                    [
+                        '"',
+                        '\\'    //replace the `"` and the `\` chars...
+                    ],
+                    [
+                        '\\"',
+                        '\\\\'  //... by the `\"` and the `\\` chars
+                    ],
+                    $json
+                )
+            );
+        }
+        return new ServerError($obj->message, $obj->code, $obj->line, $obj->other_info);
     }
 
     /**
@@ -391,7 +438,7 @@ class DB{
     }*/
 
     /**
-     * glob but return an array of Music
+     * glob() but return an array of Music
      * @param string $pattern The pattern. No tilde expansion or parameter substitution is done. Accepts special characters.
      * @param ?int $flags =0 | Valid flags: GLOB_MARK, GLOB_NOSORT, GLOB_NOCHECK, GLOB_NOESCAPE, GLOB_BRACE, GLOB_ONLYDIR, GLOB_ERR; See the doc for more details.
      * @throws ServerError Lance une ServerError si glob échoue (=== false)
@@ -399,7 +446,7 @@ class DB{
     static function glob(string $pattern, ?int $flags = 0) : array{
         $glob = glob($pattern, $flags);
 
-        if($glob === false){throw new ServerError("The glob function encounters an error, please check $pattern (pattern) and $flags (flags).", 500, "Error occured in line " . __LINE__ ." of file " . __FILE__);}
+        if($glob === false){throw new ServerError("The glob function encounters an error, please check $pattern (pattern) and $flags (flags).", 500, __LINE__, "Error occured in file " . __FILE__);}
         
         foreach($glob as $i=>$file){
             $files[$i] = Music::getFromFile($file);

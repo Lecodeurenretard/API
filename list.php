@@ -19,7 +19,7 @@
                 
             default:
                 header("Allow: GET, POST, HEAD;", false, 405);
-                throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422);
+                throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422, __LINE__);
         }
 
         checkAccept($req, false);
@@ -62,7 +62,7 @@
             return $ret;
         }
         
-        throw new ServerError('Can only give representation in JSON or XML', 406, 'Accept header: ' . HEADERS['Accept']);
+        throw new ServerError('Can only give representation in JSON or XML', 406, __LINE__, 'Accept header: ' . HEADERS['Accept']);
     }catch(ServerError $err){
         header('Content-Language: en');
         header('Content-Type: application/json; charset=utf-8', true, $err->getCode());

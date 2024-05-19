@@ -1,1 +1,4 @@
-small modifscorrections in doc
+added line count and function doc
+
+class.php
+	made a few optimizations

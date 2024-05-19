@@ -171,6 +171,7 @@ The JSON will always have 5 fields:
 + __`code`__: The HTTP error code or 0, if 0 the error is not intended.
 + __`name`__: The name of the HTTP error __or__ if code == 0 the name of the class of the error.
 + __`message`__: A message explaining the error
++ __`line`__: The number of the line from where the error was thrown
 + __`stack_trace`__: the stack trace (only availble for testers and admin)
 + __`other_info`__: further informations on the reason of the failure.
 

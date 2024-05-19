@@ -134,7 +134,7 @@ function redirect(string $url, ?array $paramName = null, ?array $paramValue = nu
     if($url == 'index.php'){$url = 'music-infos';}//index.php will redirect on music-infos.php regardless of the request (and will lose the headers)
     
     if($code > 399 || $code < 299){
-        throw new ServerError("Cannot redirect with the code: '$code'", 500, 'function redirect()');
+        throw new ServerError("Cannot redirect with the code: '$code'", 500, __LINE__, 'function redirect()');
     }
 
     $head = isset($headers)? $headers : HEADERS;
@@ -277,7 +277,7 @@ function parseAcceptHeader(bool $associative = false, bool $errorHeader = false)
  * @param bool $associative If the function returns an associative array (see return)
  */
 function parseHeader(string $header) : array{
-    if(!array_key_exists($header, HEADERS)){ throw new ServerError("Header '$header' is not set!", 500); }
+    if(!array_key_exists($header, HEADERS)){ throw new ServerError("Header '$header' is not set!", 500, __LINE__); }
 	$nonParsed = HEADERS[$header];
 	$comma = explode(',', $nonParsed);
 
@@ -303,11 +303,11 @@ function checkAccept(array $req, bool $redirect=true) : void{
     if(!array_key_exists('file', $req) || empty($req['file'])){$req['file'] = '';}
 
     if(array_key_exists('Accept-Language', HEADERS) && !str_contains(HEADERS['Accept-Language'], '*') && !str_contains(HEADERS['Accept-Language'], 'en')){
-        throw new ServerError('Cannot provide language other that english');
+        throw new ServerError('Cannot provide language other that english', 406, __LINE__);
     }
 
     if(array_key_exists('Accept-Charset', HEADERS) && !str_contains(HEADERS['Accept-Charset'], '*') && !str_contains(HEADERS['Accept-Charset'], 'utf-8')){
-        throw new ServerError('Cannot provide another charset that utf-8', 406);
+        throw new ServerError('Cannot provide another charset that utf-8', 406, __LINE__);
     }
 
     if(isMaxWeightAndAvailable('*/*')){//the representation by default is the one we first requested
@@ -335,10 +335,15 @@ function checkAccept(array $req, bool $redirect=true) : void{
     foreach(parseAcceptHeader() as $i => $head){
         $types[$i] = $head->type;
     }
-    throw new ServerError('Cannot provide this representation: json, html, xml and mp3 responses are the only other alternatives.', 406, 'Tried to get a ' . arrayToString($types, ' or a ', "'"));
+    throw new ServerError('Cannot provide this representation: json, html, xml and mp3 responses are the only other alternatives.', 406, __LINE__, 'Tried to get a ' . arrayToString($types, ' or a ', "'"));
 }
 
-function verifyAndAccept(string $type, string $sous_type) : string{
+/**
+ * Checks if the type requested in the headers matches the type given and has the largest weight
+ * @param string $type the first part of the MIME type (**type** / subtype)
+ * @param string $sous_type  the second part of the MIME type (type / **subtype**)
+ */
+function verifyAndAccept(string $type, string $sous_type) : bool{
 	return verifyAcceptsType($type, $sous_type) && (isMaxWeightAndAvailable("$type/$sous_type") || isMaxWeightAndAvailable("$type/*"));
 }
 
@@ -355,7 +360,7 @@ function checkAuthorization() : string|false{
     if(!array_key_exists(1, $value)){return false;}
     $value = $value[1];
     
-    if($type != 'Basic'){throw new ServerError('Unhandled authorization type', 401, "tried to authorize with '$type'", ['WWW-Authenticate: Basic']);}
+    if($type != 'Basic'){throw new ServerError('Unhandled authorization type', 401, __LINE__, "tried to authorize with '$type'", ['WWW-Authenticate: Basic']);}
 
     $id = explode(':', $value, 2)[0];
     $password = explode(':', $value, 2);
@@ -366,7 +371,7 @@ function checkAuthorization() : string|false{
         if($id == $_SERVER["${user}ID"] && $password == $_SERVER["{$user}Password"]){   //check the user credentials
             return $user;
         }elseif($id == $_SERVER["{$user}ID"] && $password != $_SERVER["{$user}Password"]){//check the user credentials
-            throw new ServerError('Wrong password for this account', 401, '', ['WWW-Authenticate: Basic']);
+            throw new ServerError('Wrong password for this account', 401, __LINE__, '', ['WWW-Authenticate: Basic']);
         }
     }
 
@@ -379,17 +384,17 @@ function checkAuthorization() : string|false{
  */
 function checkParamFile(array | string &$req){
     if(!array_key_exists('file', $req) || empty($req['file']) || $req['file'] == ''){
-        throw new ServerError("Parameter 'file' is missing or empty", 400);
+        throw new ServerError("Parameter 'file' is missing or empty", 400, __LINE__);
     }
 
     if(gettype($req) == 'string'){
         $req = ['file' => $req];
 
     }else if(!array_key_exists('file', $req)){
-        throw new ServerError("the parameter 'file' is missing.", 400);
+        throw new ServerError("the parameter 'file' is missing.", 400, __LINE__);
         
     }elseif(empty($req['file'] || $req['file'] == '')){
-        throw new ServerError("No value is assigned to the parameter 'file'.", 400);
+        throw new ServerError("No value is assigned to the parameter 'file'.", 400, __LINE__);
     }
     
     if(!array_key_exists('extension', pathinfo($req['file']))){ //don't have extention
@@ -400,15 +405,15 @@ function checkParamFile(array | string &$req){
     $externalpath = Music::STORAGE_URL . $req['file'];
 
     if(!file_exists($internalpath) || !is_file($internalpath)){
-        throw new ServerError('The specified element does not exist.', 404, "Path: $externalpath");
+        throw new ServerError('The specified element does not exist.', 404, __LINE__, "Path: $externalpath");
 
     }elseif(str_contains($req['file'], 'vendor/')){ //les librairies composer
-        throw new ServerError('The access to this area is forbidden.', 403, "Attempt to access the 'vendor' directory.");
+        throw new ServerError('The access to this area is forbidden.', 403, __LINE__, "Attempt to access the 'vendor' directory.");
     
     }else if(!str_contains(realpath($internalpath), Music::STORAGE_PATH)){  //on vérifie que le script ne cherche pas en dehors du bon dossier
-        throw new ServerError("The specified path leads outside the 'api' folder", 403, (realpath($externalpath) === false)? 'realpath() failed' : "attempt to access " . realpath($externalpath));
+        throw new ServerError("The specified path leads outside the 'api' folder", 403, __LINE__, (realpath($externalpath) === false)? 'realpath() failed' : "attempt to access " . realpath($externalpath));
     }elseif(!str_ends_with($req["file"], '.mp3')){
-        throw new ServerError("Can't open this file", 400);
+        throw new ServerError("Can't open this file", 400, __LINE__);
     }
 }
 
@@ -465,7 +470,7 @@ function XML_Style(bool $noThrow = false, array $req=null) : bool{
     if(isset($req) && array_key_exists('styled', $req)){
         $style = strToBool($req['styled']);
         if(empty($style) && $style !== false && !$noThrow){
-            throw new ServerError("Wrong param in the parameter 'styled'", 400, "header value: `{$req['styled']}`");
+            throw new ServerError("Wrong param in the parameter 'styled'", 400, __LINE__, "header value: `{$req['styled']}`");
         }elseif(empty($style) && $style !== false){
             return false;
         }
@@ -481,7 +486,7 @@ function XML_Style(bool $noThrow = false, array $req=null) : bool{
     }
     $style = strToBool($Body_style);
     if(empty($style) && $style !== false && !$noThrow){
-        throw new ServerError("Wrong param in the header 'Body-Style'", 400, "header value: `$Body_style`");
+        throw new ServerError("Wrong param in the header 'Body-Style'", 400, __LINE__, "header value: `$Body_style`");
     }elseif(empty($style) && $style !== false){
         return false;
     }

@@ -28,7 +28,7 @@
             */
             default:
                 header("Allow: GET, POST, HEAD;", false, 405);
-                throw new ServerError("The method \"$method\" is not allowed or unknown, please try again with one specified in the header Allow.", 405);
+                throw new ServerError("The method \"$method\" is not allowed or unknown, please try again with one specified in the header Allow.", 405, __LINE__);
         }
 
         checkAccept(
@@ -39,7 +39,7 @@
 
         $music = Music::getFromFile($req['file']);
         $return = '';
-        if(array_key_exists('title', $req) && strToBool($req['title'] == null)){throw new ServerError("Parameter title incorrect, it must be equal to 'true' or 'false'", 400);}
+        if(array_key_exists('title', $req) && strToBool($req['title'] == null)){throw new ServerError("Parameter title incorrect, it must be equal to 'true' or 'false'", 400, __LINE__);}
         if(
             array_key_exists('title', $req) 
             && strToBool($req['title'])        

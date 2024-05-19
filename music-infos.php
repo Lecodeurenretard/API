@@ -26,14 +26,14 @@
             */
             default:
                 header("Allow: GET, POST, HEAD", false, 405);
-                throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422);
+                throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422, __LINE__);
         }
 
         $parsed_Accept = parseAcceptHeader();
         $indent = array_key_exists('indent', $req)? $req['indent'] : 0; 
-        if(!is_numeric(trim($indent))){throw new ServerError("The 'indent' is not a number", 400, "indent: $indent");}
+        if(!is_numeric(trim($indent))){throw new ServerError("The 'indent' is not a number", 400, __LINE__, "indent: $indent");}
 
-        $indent = (int) rtrim($indent);    //convert to int
+        $indent = (int) trim($indent);    //convert to int
         if($indent < 0){$indent=0;}
 
         checkAccept(
