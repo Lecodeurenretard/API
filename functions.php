@@ -492,3 +492,58 @@ function XML_Style(bool $noThrow = false, array $req=null) : bool{
     }
     return $style;
 }
+
+/**
+ * Read the content of the body
+ * @param string $type The MIME type of the body
+ */
+function readBody(string $type = 'application/json') : array{
+    $raw = file_get_contents('php://input');
+    if($type == 'application/json'){
+        $ret = json_decode($raw);
+        if(gettype($ret) != 'object'){throw new ServerError('Root element of body should be an object', 400, __LINE__, 'The object: ' . str_replace('"', "\"", $raw));}
+
+        return (array) $ret;
+    }
+    throw new ServerError('Type not supported', 500, __LINE__, "the type: `$type`");
+}
+
+/**
+ * Check the verb of the request and outputwhat should the program do
+ * @param string $method What is the method (HTTP verb) of the request?
+ * @param bool $exit if the program should stop
+ * @param bool $isHead is the request made with the HEAD verb
+ * @return ?array Returns an array containing the params of the request
+ */
+function checkReq(string $method, &$exit, &$isHead): ?array{
+    $isHead = false;
+    switch($method){
+        case "HEAD":
+            $isHead = true; //dans ce cas là, on n'envoie que les headers
+        case "GET":
+            return $_GET;  
+            
+        case "POST":
+            if(!array_key_exists('Content-Type', HEADERS) || empty(HEADERS['Content-Type']) || HEADERS['Content-Type'] === ''){
+                throw new ServerError('Header `Content-Type` is empty/not set!', 400);
+
+            }elseif(HEADERS['Content-Type'] != 'multipart/form-data' && HEADERS['Content-Type'] != 'application/json'){
+                throw new ServerError('Can only read JSON and multipart/form-data.');
+            }
+            
+            return (sizeof($_POST)!=0)? $_POST : readBody();
+
+
+        case 'OPTIONS':
+            header('Allow: GET, POST, HEAD, OPTIONS');
+            header('Access-Control-Allow-Headers: Accept, Accept-Error, Req-Body-Indent, Req-Body-Style');
+            http_response_code(200); 
+
+            $exit=true;
+            break;
+            
+        default:
+            header("Allow: GET, POST, HEAD, OPTIONS;", true, 405);
+            throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422, __LINE__);
+    }
+}

@@ -7,36 +7,9 @@
         require("class.php");
         
         
-        $head_method = false;
-        $method = $_SERVER['REQUEST_METHOD'];
-
-        switch($method){
-            case "HEAD":
-                $head_method = true;
-            case "GET":
-                $req =& $_GET;   //on met la référence au cas où on change les supervariable entre temps
-                break;
-            
-            case "POST":
-                $req =& $_POST;
-                break;
-            /*
-            elseif($method == "PUT"){
-                header("Allow:  GET, POST, HEAD;", false, 403);
-                throw new ServerError("Method PUT not allowed.", 403);
-            }
-            */
-
-            case 'OPTIONS':
-                header('Allow: GET, POST, HEAD, OPTIONS');
-                header('Access-Control-Allow-Headers: Accept');
-                http_response_code(200); 
-                return '';
-
-            default:
-                header("Allow: GET, POST, HEAD, OPTIONS;", false, 405);
-                throw new ServerError("The method \"$method\" is not allowed or unknown, please try again with one specified in the header Allow.", 405, __LINE__);
-        }
+        $req = checkReq($_SERVER["REQUEST_METHOD"], $exit, $head_method);
+        if($exit){ return ''; }
+        unset($exit);   //no wasted memory !
 
         checkAccept(
             $req,

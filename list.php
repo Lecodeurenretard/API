@@ -1,33 +1,13 @@
 <?php
     define('PAGE', 'list');
     define('HEADERS', getallheaders());
+    header('Content-Language: en');
     require("class.php");
 
-    $method = $_SERVER["REQUEST_METHOD"];
-    $head_method = false;
-    header('Content-Language: en');
     try{
-        switch($method){
-            case "HEAD":
-                $head_method = true; //dans ce cas là, on n'envoie que les headers
-            case "GET":
-                $req =& $_GET;   //on met la référence au cas où on change les supervariable entre temps
-                break;
-                
-            case "POST":
-                $req =& $_POST;
-                break;
-
-            case 'OPTIONS':
-                header('Allow: GET, POST, HEAD, OPTIONS');
-                header('Access-Control-Allow-Headers: Accept, Accept-Error, Req-Body-Indent, Req-Body-Style');
-                http_response_code(200); 
-                return '';
-                
-            default:
-                header("Allow: GET, POST, HEAD, OPTIONS;", false, 405);
-                throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422, __LINE__);
-        }
+        $req = checkReq($_SERVER["REQUEST_METHOD"], $exit, $head_method);
+        if($exit){ return ''; }
+        unset($exit);   //no wasted memory !
 
         checkAccept($req, false);
 

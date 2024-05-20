@@ -1,11 +1,6 @@
-added OPTIONS verb support
+Better POST switch statement in list, music-infos, html, mp3 put in a function
 
-In a request, Body-* -> Req-Body-*
+updated doc
 
-html, mp3, list & music-infos
-	header 'Content-Language' guaranteed
-
-list:
-	indetation and style properly implemented
-
-doc updated
+functions.php:
+	new functions: readBody() & checkReq()

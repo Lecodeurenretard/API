@@ -1,6 +1,7 @@
 # API Documentation
 ## Purpose
-I made an api to get music from my server. This API is public so feel free to try at [api.musiques.nils.test.sc2mnrf0802.universe.wf](http://api.musiques.nils.test.sc2mnrf0802.universe.wf/?file=An+Oasis+In+Time)  (I also created a shorter url: [bit.ly/API_nils_test](https://bit.ly/API_nils_test))
+I made an api to get music from my server. This API is public so feel free to try at [api.musiques.nils.test.sc2mnrf0802.universe.wf](http://api.musiques.nils.test.sc2mnrf0802.universe.wf/?file=An+Oasis+In+Time)  (I also created a shorter url: [bit.ly/API_nils_test](https://bit.ly/API_nils_test)).  
+If you want to get a quick reminder of the names of the headers, you can always request the endpoint with the __`OPTIONS`__ verb.
 
 ## URI list
 - __[music-infos *.php*](music-infos.php)__: Gives the ressource's headers (title, n° of track, etc...) in JSON or XML. 
@@ -18,12 +19,12 @@ I made an api to get music from my server. This API is public so feel free to tr
 - __[index *.php*](index.php)__: Redirects to [music-infos](music-infos.php).
 
 
-## How to make a request
+## How to make a good request
 ### Quick explaination
-In order to make a request, you have to send a HTTP request to one of the endpoints with the parameter "`file`" set to the name of the music you want, the extention (.mp3) is optional.  
+In order to make a request, you have to send a HTTP request to one of the endpoints with the parameter "`file`" set to the name of the music you want, the extention (.mp3) is optional.
 Ex: `curl api.musiques.nils.test.sc2mnrf0802.universe.wf/music-infos?file=An%20Oasis%20In%20Time`
 
-### Typical request
+### Typical (GET) request
 Here is the request shown in the last part: 
 ```
 GET /music-infos?file=An%20Oasis%20In%20Time HTTP/1.0
@@ -66,6 +67,10 @@ A succeful request will send a response with those 5 fields
 + _Unsigned Int_ __`track`__: The number of the track.
 + _String_ __`commentaire`__: A comment I wrote, often empty.
 + _String_ __`path`__: The path of the file on the server starting in the `api` folder (just the basename of the music).
+
+### POST Request
+As I wrote, for now a POST request (with or without authorization) is equivalent to a GET request.  
+You must send a body formatted in JSON or as a HTML form (multipart/form-data).
 
 ### Request with browser
 With the new style compatibility, you can now request in browser. Make sure to have the _redirect_ param disabled in order to not get redirected to the __[html](html.php)__ page. 
@@ -171,7 +176,7 @@ There's 4 accepted values:
 
 ## Handled methods
 For now, any other method that __`GET`__, __`POST`__, __`HEAD`__ or __`OPTIONS`__ will send back an error message.  
-A `GET` request is equivalent to a `POST` request (parsed as an HTML form), the server will send the headers of the music. A `HEAD` request will send back only the headers.
+A `GET` request is equivalent to a `POST` request, the server will send the headers of the music. A `HEAD` request will send back only the headers.
 
 ## Handling errors
 The server will __always__ send the error message in JSON.  
