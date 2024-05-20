@@ -75,31 +75,9 @@
         
         throw new ServerError('Can only give representation in JSON or XML', 406, __LINE__, 'Accept header: ' . HEADERS['Accept']);
     }catch(ServerError $err){
-        header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
-        
-        if(!$head_method){echo $err->toJson();}
-        return $err->toJson();
-        
+       return errSrv($err, $head_method);
+
     }catch(Throwable $err){
-        header('Content-Type: application/json; charset=utf-8', true, 500);
-
-        try {
-            $e = ServerError::constructFromThrowable($err, 'Caught unexpected error');
-            $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
-        }catch(Throwable $th){
-            //unable to access ServerError
-            $ret = 
-                '{'                                             . PHP_EOL .
-                "\t". '"code": 500'                             . PHP_EOL .
-                "\t". '"name": "Unknown error"'                 . PHP_EOL .
-                "\t". '"message": ' . "{$th->getMessage()}"     . PHP_EOL .
-                "\t". '"other-info": ""'                        . PHP_EOL .
-                '}';
-        }
-        
-        if(empty($head_method) || !$head_method){echo $ret;}
-        
-        return $ret;
+        return errThrow($err, $head_method);
     }
-
-    
+?>

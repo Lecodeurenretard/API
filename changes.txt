@@ -1,6 +1,1 @@
-Better POST switch statement in list, music-infos, html, mp3 put in a function
-
-updated doc
-
-functions.php:
-	new functions: readBody() & checkReq()
+refactoring

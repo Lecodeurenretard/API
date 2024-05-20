@@ -513,9 +513,13 @@ function readBody(string $type = 'application/json') : array{
  * @param string $method What is the method (HTTP verb) of the request?
  * @param bool $exit if the program should stop
  * @param bool $isHead is the request made with the HEAD verb
+ * @param ?array $methods the accepted methods to put in the 'Allow' header in case of a OPTIONS req.  
+ * If null, uses this array ['GET', 'POST', 'HEAD', 'OPTIONS']
+ * @param ?array $headers the accepted headers to put in the 'Access-Control-Allow-Headers' header in case of a OPTIONS req.  
+ * If null, uses this array ['Accept', 'Accept-Error', 'Req-Body-Indent', 'Req-Body-Style']
  * @return ?array Returns an array containing the params of the request
  */
-function checkReq(string $method, &$exit, &$isHead): ?array{
+function checkReq(string $method, &$exit, &$isHead, ?array $methods = null, ?array $headers = null): ?array{
     $isHead = false;
     switch($method){
         case "HEAD":
@@ -535,8 +539,10 @@ function checkReq(string $method, &$exit, &$isHead): ?array{
 
 
         case 'OPTIONS':
-            header('Allow: GET, POST, HEAD, OPTIONS');
-            header('Access-Control-Allow-Headers: Accept, Accept-Error, Req-Body-Indent, Req-Body-Style');
+            if(empty($methods)){ $methods = ['GET', 'POST', 'HEAD', 'OPTIONS']; }
+            if(empty($headers)){ $headers = ['Accept', 'Accept-Error', 'Req-Body-Indent', 'Req-Body-Style']; }
+            header('Allow: ' . arrayToString($methods));
+            header('Access-Control-Allow-Headers: ' . arrayToString($headers));
             http_response_code(200); 
 
             $exit=true;
@@ -546,4 +552,53 @@ function checkReq(string $method, &$exit, &$isHead): ?array{
             header("Allow: GET, POST, HEAD, OPTIONS;", true, 405);
             throw new ServerError("Method $method is not allowed or unknown, please try again with one specified in the header Allow.", 422, __LINE__);
     }
+}
+
+/**
+ * Handles errors which are ServerError.      
+ * On failure, calls errThrow()
+ * @param ServerError $err The parameter to handle
+ * @param bool $head_method If the function should NOT echo the error (will be returned regardless of this arg)
+ * @return string The error under a JSON or XML format
+ */
+function errSrv(ServerError $err, bool $head_method) : string{
+    try{
+        header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
+        $err->sendErrorHeaders();
+
+        $ret = ServerError::getMaxAccept() == 'application/xml'? $err->toXML(false) : $err->toJSON();  //can return XML
+
+        if(!$head_method){echo $ret;}
+        return $ret;
+    }catch(Throwable $e){
+        return errThrow($e, $head_method);
+    }
+}
+
+/**
+ * Handles all Thowables.
+ * @param ServerError $err The parameter to handle
+ * @param bool $head_method If the function should NOT echo the error (will be returned regardless of this arg)
+ * @return string The error under a JSON or XML format
+ */
+function errThrow(Throwable $err, bool $head_method) : string{
+    header('Content-Type: application/json; charset=utf-8', true, 500);
+
+        try {
+            $e = ServerError::constructFromThrowable($err, 'Caught unexpected error');
+            $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
+        }catch(Throwable $th){
+            //unable to access ServerError
+            $ret = 
+                '{'                                             . PHP_EOL .
+                "\t". '"code": 500'                             . PHP_EOL .
+                "\t". '"name": "Unknown error"'                 . PHP_EOL .
+                "\t". '"message": ' . "{$th->getMessage()}"     . PHP_EOL .
+                "\t". '"other-info": ""'                        . PHP_EOL .
+                '}';
+        }
+        
+        if(empty($head_method) || !$head_method){echo $ret;}
+        
+        return $ret;
 }

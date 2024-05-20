@@ -7,7 +7,7 @@
         require("class.php");
         
         
-        $req = checkReq($_SERVER["REQUEST_METHOD"], $exit, $head_method);
+        $req = checkReq($_SERVER["REQUEST_METHOD"], $exit, $head_method, null, ['Accept', 'Accept-Error']);
         if($exit){ return ''; }
         unset($exit);   //no wasted memory !
 
@@ -34,33 +34,9 @@
             echo $return;
         return $return;
     }catch(ServerError $err){
-        header('Content-Type: application/json; charset=utf-8', true, $err->getCode());
-        $err->sendErrorHeaders();
-
-        $ret = ServerError::getMaxAccept() == 'application/xml'? $err->toXML(false) : $err->toJSON();  //can return XML
-
-        if(!$head_method){echo $ret;}
-        return $ret;
+       return errSrv($err, $head_method);
 
     }catch(Throwable $err){
-        header('Content-Type: application/json; charset=utf-8', true, 500);
-
-        try {
-            $e = ServerError::constructFromThrowable($err, 'Caught unexpected error');
-            $ret = ServerError::getMaxAccept() == 'application/xml'? $e->toXML(false) : $e->toJSON();  //can return XML
-        }catch(Throwable $th){
-            //unable to access ServerError
-            $ret = 
-                '{'                                             . PHP_EOL .
-                "\t". '"code": 500'                             . PHP_EOL .
-                "\t". '"name": "Unknown error"'                 . PHP_EOL .
-                "\t". '"message": ' . "{$th->getMessage()}"     . PHP_EOL .
-                "\t". '"other-info": ""'                        . PHP_EOL .
-                '}';
-        }
-        
-        if(empty($head_method) || !$head_method){echo $ret;}
-        
-        return $ret;
+        return errThrow($err, $head_method);
     }
 ?>
