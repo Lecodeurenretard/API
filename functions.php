@@ -463,7 +463,7 @@ function xmlentities_callback(string &$str) : void{
 }
 
 /**
- * Check Body-Style header and styled param
+ * Check Req-Body-Style header and styled param
  * @param bool $noThrow If true, don't throw any error, if an error occurs return false
  */
 function XML_Style(bool $noThrow = false, array $req=null) : bool{
@@ -479,14 +479,14 @@ function XML_Style(bool $noThrow = false, array $req=null) : bool{
     }
 
     try {
-        $Body_style = parseHeader('Body-Style')[0][0];
+        $Body_style = parseHeader('Req-Body-Style')[0][0];
     } catch (ServerError $e) {
-        if($e->getMessage() != "Header 'Body-Style' is not set!" && !$noThrow) { throw $e; } //in case of an unexpected err
+        if($e->getMessage() != "Header 'Req-Body-Style' is not set!" && !$noThrow) { throw $e; } //in case of an unexpected err
         return false;
     }
     $style = strToBool($Body_style);
     if(empty($style) && $style !== false && !$noThrow){
-        throw new ServerError("Wrong param in the header 'Body-Style'", 400, __LINE__, "header value: `$Body_style`");
+        throw new ServerError("Wrong param in the header 'Req-Body-Style'", 400, __LINE__, "header value: `$Body_style`");
     }elseif(empty($style) && $style !== false){
         return false;
     }

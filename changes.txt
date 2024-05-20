@@ -1,4 +1,11 @@
-added line count and function doc
+added OPTIONS verb support
 
-class.php
-	made a few optimizations
+In a request, Body-* -> Req-Body-*
+
+html, mp3, list & music-infos
+	header 'Content-Language' guaranteed
+
+list:
+	indetation and style properly implemented
+
+doc updated

@@ -138,17 +138,17 @@ or
 
 ### Particular parameters in URL
 + _bool_ `redirect`: Define if redirections should be done works for [music-infos](music-infos.php), [mp3](mp3.php) and [html](html.php) endpoints.
-+ _bool_ `styled`: Equivalent to the `Body-Style` header, controls whether or not the response should have a predefined stylesheet attached. Works for [music-infos](music-infos.php) and [list](list.php).
++ _bool_ `styled`: Equivalent to the `Req-Body-Style` header, controls whether or not the response should have a predefined stylesheet attached. Works for [music-infos](music-infos.php) and [list](list.php).
 
 #### Write a boolean parameter
 There's 4 accepted values:
 + `true` <=> `1`
 + `false` <=> `0`
 
-## Handled Headers
-
+## Headers
+### In a request
 - __`Accept`__: The MIME types expected separated by a comma(`,`), you can include the weight argument (`q`). ex: `Accept: application/json, */*; q=0.7`. By convention, the weight should be between 0 and 1, however any positive value is correct.
-    ### Accepted types: 
+    #### Accepted types: 
     + **application/json** (default),
     + application/xml,
     + audio/mp3,
@@ -158,11 +158,19 @@ There's 4 accepted values:
 - __`Accept-Error`__: The type to send back if an error occurs, will override the `Accept` header, takes only:
     + **application/json** (default),
     + application/xml
-### particular headers
-+ _bool_ **`Body-Style`**: If the response should link a predefined stylesheet, specific to the [music-infos](music-infos.php) endpoint with an XML response.
+#### Particular headers
++ _bool_ **`Req-Body-Style`**: If the response should link a predefined stylesheet, specific to the [music-infos](music-infos.php) and [list](list.php) endpoints with an XML response.
++ _unsigned int_ **`Req-Body-Indent`**: The number of horizontal indent to apply on all the body (override the param `indent`) (specific to [music-infos](music-infos.php) and [list](list.php)).
+
+### In the response
+- *string* __`Content-Type`__: The format of the response
+- *bool* __`Body-Style`__: If the body has a stylesheet (Only availble in [music-infos](music-infos.php) and [music-infos](music-infos.php))
+- *unsigned int* __`Body-Indent`__: The indentation of the body (only in [list](list.php) and [music-infos](music-infos.php)).
+
+
 
 ## Handled methods
-For now, any other method that __`GET`__, __`POST`__ or __`HEAD`__ will send back an error message.  
+For now, any other method that __`GET`__, __`POST`__, __`HEAD`__ or __`OPTIONS`__ will send back an error message.  
 A `GET` request is equivalent to a `POST` request (parsed as an HTML form), the server will send the headers of the music. A `HEAD` request will send back only the headers.
 
 ## Handling errors

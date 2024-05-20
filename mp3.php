@@ -1,6 +1,7 @@
 <?php 
     define('HEADERS', getallheaders());
     define('PAGE', 'mp3');
+    header('Content-Language: en');
      try{
          require("class.php");
     
@@ -25,8 +26,15 @@
                 throw new ServerError("Method PUT not allowed.", 403);
             }
             */
+
+            case 'OPTIONS':
+                header('Allow: GET, POST, HEAD, OPTIONS');
+                header('Access-Control-Allow-Headers: Accept');
+                http_response_code(200); 
+                return '';
+
             default:
-                header("Allow: GET, POST, HEAD;", false, 405);
+                header("Allow: GET, POST, HEAD, OPTIONS;", false, 405);
                 throw new ServerError("The method \"$method\" is not allowed or unknown, please try again with one specified in the header Allow.", 405, __LINE__);
         }
 

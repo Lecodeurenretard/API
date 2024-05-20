@@ -1,4 +1,10 @@
 <?php
+    if($_SERVER["REQUEST_METHOD"] == 'OPTIONS'){
+         header('Allow: GET, POST, HEAD, OPTIONS');
+                http_response_code(200); 
+                return '';
+    }
+
     define('PAGE', 'index');
     define('HEADERS', []);
     require("class.php");
